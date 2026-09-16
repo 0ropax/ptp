@@ -27,6 +27,9 @@ use Illuminate\Queue\SerializesModels;
 use SplFileObject;
 use Throwable;
 
+
+use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
+
 class PtpJob extends BaseJob implements ShouldQueue
 {
     use Batchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -90,6 +93,8 @@ class PtpJob extends BaseJob implements ShouldQueue
         public Volume $volume,
         public User $user,
         public string $jobId,
+        public int $ptpJobId,  #TODO ! LÄSST DEN TEST FAILEN
+
     ) {
 
         //$inputFile.'.json' will be used for image annotations, $inputFile.'_images.json' for image paths
@@ -110,6 +115,10 @@ class PtpJob extends BaseJob implements ShouldQueue
     public function handle()
     {
         DB::transaction(function () {
+
+            PtpJobModel::where("id", $this->ptpJobId)->update(["status" => "in-progress"]);
+
+
             $callback = function ($images, $paths) {
                 $this->generateImageInputFile($paths, $images);
                 $this->python();
@@ -290,6 +299,8 @@ class PtpJob extends BaseJob implements ShouldQueue
         array $annotations,
         array $annotationLabels
     ): void {
+        ##TODO original noch
+
         ImageAnnotation::insert($annotations);
 
         $newImageAnnotations = ImageAnnotation::orderBy('id', 'desc')
