@@ -10,6 +10,7 @@ use Biigle\Jobs\ProcessAnnotatedImage;
 use Biigle\Modules\Ptp\Exceptions\PythonException;
 use Biigle\Modules\Ptp\Notifications\PtpJobConcluded;
 use Biigle\Modules\Ptp\Notifications\PtpJobFailed;
+use Biigle\Modules\Ptp\PtpAnnotation;
 use Biigle\Shape;
 use Biigle\User;
 use Biigle\Volume;
@@ -114,9 +115,12 @@ class PtpJob extends BaseJob implements ShouldQueue
      */
     public function handle()
     {
+        \Log::info("PTP_HANDLE");
+
         DB::transaction(function () {
 
             PtpJobModel::where("id", $this->ptpJobId)->update(["status" => "in-progress"]);
+
 
 
             $callback = function ($images, $paths) {
@@ -125,11 +129,19 @@ class PtpJob extends BaseJob implements ShouldQueue
             };
             $this->volume->images()->chunkById(static::$imageChunkSize, function ($chunk) use ($callback) {
                 $imageData = $this->generateInputFile($chunk);
+                #chunks, nicht alle bilder vom volume gleichzeitig
 
                 //$imageData can be empty if we have a chunk of images without an annotation
                 if (!empty($imageData)) {
                     FileCache::batch($imageData, $callback);
                     $this->uploadConvertedAnnotations();
+
+                    #image aus dem chunk nehmen und einzeln schicken #TODO ! normales rüber senden später
+                    foreach($chunk as $image) {
+                        \Log::info("PTP_PATCH DISPATCH");
+                        PtpPatchJob::dispatch($image, $this->ptpJobId)->afterCommit();
+                    }
+
                 }
             });
         });
@@ -166,7 +178,7 @@ class PtpJob extends BaseJob implements ShouldQueue
                 $imageAnnotationArray[$annotation->image_id] = [];
             }
             $imageAnnotationArray[$annotation->image_id][] = [
-                'annotation_id' => $annotation->id,
+                'annotation_id' => $annotation->id,  #TODO ursprünglicher Punkt, noch mit reinnehmen, source_anno
                 'points' => $annotation->points,
                 'shape' => $annotation->shape_id,
                 'image' => $annotation->image_id,
@@ -245,6 +257,8 @@ class PtpJob extends BaseJob implements ShouldQueue
      */
     public function uploadConvertedAnnotations(): void
     {
+        \Log::info("PTP_UPLOAD_ERREICHT");
+
         if (File::missing($this->outputFile)) {
             return;
         }
@@ -269,8 +283,24 @@ class PtpJob extends BaseJob implements ShouldQueue
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
+            #"annotation_id" => $annotation['id'],
 
-            $insertAnnotations[] = $newAnnotation;
+            \Log::info("PTP_sourceAnnotationId", ["value" => $annotation["annotation_id"]]);
+
+
+            $newPtpAnnotation = [
+                "ptp_job_id" => $this->ptpJobId,
+                "annotation_id" => null,
+                "source_annotation_id" => $annotation["annotation_id"],
+                'points' => json_encode($annotation['points']),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+
+           # $insertAnnotations[] = $newAnnotation;
+            $insertAnnotations[] = $newPtpAnnotation;
+
             $insertAnnotationLabels[] = [
                 'label_id' => intval($annotation['label_id']),
                 'user_id' => $this->user->id,
@@ -299,10 +329,14 @@ class PtpJob extends BaseJob implements ShouldQueue
         array $annotations,
         array $annotationLabels
     ): void {
-        ##TODO original noch
 
-        ImageAnnotation::insert($annotations);
 
+
+
+        \Log::info("PTP_ANNOS VOR INSERT", ["count" => count($annotations), "annotations" => $annotations]);
+
+        PtpAnnotation::insert($annotations);
+/*
         $newImageAnnotations = ImageAnnotation::orderBy('id', 'desc')
             ->take(count($annotations))
             ->get(['id', 'image_id'])
@@ -319,6 +353,8 @@ class PtpJob extends BaseJob implements ShouldQueue
         ImageAnnotationLabel::insert($annotationLabels);
 
         $this->processNewAnnotations($newImageAnnotations);
+
+        */
     }
 
     /**
@@ -352,7 +388,7 @@ class PtpJob extends BaseJob implements ShouldQueue
     {
         $this->user->notify(new PtpJobFailed($this->volume));
         $this->cleanupJob();
-        $this->cleanupFiles();
+  //      $this->cleanupFiles(); #TODO ! später rein, nach dem löschen von attr_ funktion in volumes DB
     }
 
     /**
@@ -421,6 +457,12 @@ class PtpJob extends BaseJob implements ShouldQueue
             }
 
             $tmpChunk = array_combine($header, $data);
+
+            # String zu float error aus der csv umcasten
+            $tmpChunk["annotation_id"] = (int) $tmpChunk["annotation_id"];
+            $tmpChunk["label_id"] = (int) $tmpChunk["label_id"];
+            $tmpChunk["image_id"] = (int) $tmpChunk["image_id"];
+
             $tmpChunk['points'] = json_decode($tmpChunk['points']);
             yield $tmpChunk;
         }

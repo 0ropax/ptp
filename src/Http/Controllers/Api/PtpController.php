@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Queue;
 use Ramsey\Uuid\Uuid;
 
+use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
+
 /**
  * Controller used for creating a PTP Job Chain
  */
@@ -56,8 +58,17 @@ class PtpController extends Controller
         }
 
         try {
-            $jobId = $this->setUniquePtpJob($volume);
-            $job = new PtpJob($volume, $request->user(), $jobId);
+          #TODO !
+            $ptpJob = PtpJobModel::create([
+                'volume_id' => $volumeId,
+                "status" => "pending",
+                "options_params" => ["label" => []],
+            ]); #obj + db eintrag
+
+
+            $jobId = $this->setUniquePtpJob($volume); #NICHT DAS TODO ? vlt umbenennen
+            $job = new PtpJob($volume, $request->user(), $jobId, $ptpJob->id); # TODO ! lässt tests failen
+        #    $job = new PtpJob($volume, $request->user(), $jobId);
             Queue::connection(config('ptp.job_connection'))
                 ->pushOn(config('ptp.job_queue'), $job);
         } catch (Exception $e) {
