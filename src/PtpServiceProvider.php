@@ -19,7 +19,10 @@ class PtpServiceProvider extends ServiceProvider
      */
     public function boot(Modules $modules, Router $router)
     {
+
         $this->loadViewsFrom(__DIR__.'/resources/views', 'ptp');
+
+        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
 
         $this->publishes([
             __DIR__.'/public' => public_path('vendor/ptp'),
@@ -59,5 +62,7 @@ class PtpServiceProvider extends ServiceProvider
     public function register()
     {
         $this->mergeConfigFrom(__DIR__.'/config/ptp.php', 'ptp');
+
+        config(["filesystems.disks.ptp" => ["driver" => "local", "root" => storage_path("ptp")]]);
     }
 }
