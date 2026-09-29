@@ -36,7 +36,8 @@ return [
     */
     'model_path' => storage_path('ptp').'/sam_checkpoint.pth',
 
-    "patch_storage_disk" => "ptp",
+    "patch_storage_disk" => env("PTP_PATCH_STORAGE_DISK", "ptp"),
+
 
     /*
     | URL from which to download the model checkpoint.

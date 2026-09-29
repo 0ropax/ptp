@@ -63,6 +63,16 @@ class PtpServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/config/ptp.php', 'ptp');
 
-        config(["filesystems.disks.ptp" => ["driver" => "local", "root" => storage_path("ptp")]]);
+        #in core filesystems
+        ##fallback
+        $disk = config("ptp.patch_storage_disk");
+
+        if ($disk == "ptp" && config("filesystems.disks.ptp") == null) {
+            config(["filesystems.disks.ptp" => ["driver" => "local", "root" => storage_path("ptp")]]);
+        };
+
+
+
+
     }
 }
