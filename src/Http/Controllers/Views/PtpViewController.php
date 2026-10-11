@@ -12,6 +12,7 @@ use Illuminate\Http\Response;
 use Biigle\LabelTree;
 use Biigle\Role;
 use Biigle\Project;
+use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 
 #controller für alles was mit den blades zu tun hat
 class PtpViewController extends Controller {
@@ -81,11 +82,16 @@ class PtpViewController extends Controller {
         ]);*/
 
 
+        $jobs = PtpJobModel::where("volume_id", $volume->id)
+            ->orderByDesc('created_at')
+            ->get();
+
 
         return view("ptp::index", compact(
             "volume",
             "pointCount",
-            "labelTrees"
+            "labelTrees",
+            "jobs",
         ));
     }
 }
