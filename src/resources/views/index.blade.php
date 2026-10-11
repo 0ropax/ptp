@@ -15,6 +15,7 @@
 @push('scripts')
     <script type="module">
         biigle.$declare("ptp.labelTrees", {!! $labelTrees !!});
+        biigle.$declare("ptp.volumeId", {!!  $volume->id !!});
     </script>
 
 
@@ -38,7 +39,7 @@
             @include("ptp::index.job-form")
 
 
-            <!--- TODO ! Job button blockieren wenn anderer job nochläuft. --->
+
 
             {{--
             @if ($hasJobsInProgress)
