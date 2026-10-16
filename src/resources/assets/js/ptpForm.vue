@@ -33,7 +33,7 @@ export default {
     data() {
         return {
             volumeId: biigle.$require("ptp.volumeId"),
-        /*    manualUrl: biigle.$require("volumes.ptpManualUrl"),*/
+            manualUrl: biigle.$require("ptp.ptpManualUrl"),
         };
     },
 
@@ -48,19 +48,33 @@ export default {
     },
 
     methods: {
-        sendPtpRequest() {
+       /* sendPtpRequest() {
             PtpJobApi.save({ id: this.volumeId }, {})
                 .then(this.startLoading, (e) => {
+                    window.location.reload();
+                    this.finishLoading();
+                    handleErrorResponse(e);
+                });
+        }*/
+        sendPtpRequest() {
+            this.startLoading();
+
+            PtpJobApi.save({ id: this.volumeId }, {})
+                .then(() => {
+                    window.location.reload();
+                })
+                .catch((e) => {
                     this.finishLoading();
                     handleErrorResponse(e);
                 });
         }
+
     },
 
-   /* created() {
+    created() {
         if (biigle.$require("volumes.ptpIsRunning") === true) {
             this.startLoading();
         }
-    }*/
+    }
 };
 </script>
