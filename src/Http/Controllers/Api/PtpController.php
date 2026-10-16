@@ -67,7 +67,7 @@ class PtpController extends Controller
 
 
             $jobId = $this->setUniquePtpJob($volume); #NICHT DAS TODO ? vlt umbenennen
-            $job = new PtpJob($volume, $request->user(), $jobId, $ptpJob->id); # TODO ! lässt tests failen
+            $job = new PtpJob($volume, $request->user(), $jobId, $ptpJob->id);
         #    $job = new PtpJob($volume, $request->user(), $jobId);
             Queue::connection(config('ptp.job_connection'))
                 ->pushOn(config('ptp.job_queue'), $job);

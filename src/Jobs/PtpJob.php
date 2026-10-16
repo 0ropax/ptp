@@ -94,7 +94,7 @@ class PtpJob extends BaseJob implements ShouldQueue
         public Volume $volume,
         public User $user,
         public string $jobId,
-        public int $ptpJobId,  #TODO ! LÄSST DEN TEST FAILEN
+        public int $ptpJobId,
 
     ) {
 
@@ -318,7 +318,6 @@ class PtpJob extends BaseJob implements ShouldQueue
             $this->insertAnnotationChunk($insertAnnotations, $insertAnnotationLabels);
         }
     }
-
     /**
      * Insert annotation in the DB
      *
