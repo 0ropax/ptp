@@ -1,20 +1,26 @@
 <?php
 
-#@GetMapping("/volumes/{id}/ptp")
-#public Model index(@PathVariable long id)
 $router->group([
-    'middleware' => 'auth', #eingeloggt
-    'namespace' => 'Views',
+    "middleware" => "auth",
+    "namespace" => "Views",
 ], function ($router) {
-    $router->get('volumes/{id}/ptp', [ 'as' => 'volumes-ptp', 'uses' => 'PtpJobController@index',]); #wenn route aufgerufen->nutze jobController #contr@methode
+    $router->get("volumes/{id}/ptp", [
+        "as" => "volumes-ptp",
+        "uses" => "PtpViewController@index",
+    ]);
 });
 
 $router->group([
-    'middleware' => 'auth', #eingeloggt
-    'namespace' => 'Api',
+    "middleware" => "auth", #eingeloggt
+    "namespace" => "Api",
 ], function ($router) {
-    $router->get('ptp/jobs/{id}/review', "PtpReviewController@showReviewPage"); #wenn route aufgerufen->nutze jobController #contr@methode
-    $router->get("ptp/patches/{uuid}/{id}", [ 'as' => "ptp-patch", 'uses' => 'PtpReviewController@showPatch',]); #wenn route aufgerufen->nutze jobController #contr@methode
+    $router->get("ptp/jobs/{id}/review", [
+        "as" => "ptp-review",
+        "uses" => "PtpReviewController@showReviewPage",
+    ]);
+    $router->get("ptp/patches/{uuid}/{id}/{type?}", [ "as" => "ptp-patch", "uses" => "PtpReviewController@showPatch",]);
+
+
 
 });
 #http://localhost:8000/ptp/jobs/61/review
@@ -29,4 +35,5 @@ $router->group([
     'prefix' => 'api/v1'
 ], function ($router) {
     $router->post('send-ptp-job/{id}', 'PtpController@store');
+    $router->post("ptp-jobs/{id}/review", "PtpReviewController@review");
 });
