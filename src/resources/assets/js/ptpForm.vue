@@ -1,12 +1,5 @@
 <template>
     <div class="ptp-container">
-<!--        <h4>
-            <a :href="manualUrl" target="_blank" class="btn btn-default btn-xs pull-right" title="What is this?"><span class="fa fa-info-circle" aria-hidden="true"></span></a>
-            Magic SAM<br>Point Conversion<sup>beta</sup>
-        </h4>-->
-<!--        <p>
-            This tool converts all point annotations in this volume to polygon annotations using Magic SAM. The original point annotations will not be deleted.
-        </p>-->
         <p>
             <button
                 class="btn btn-success btn-block"
@@ -33,7 +26,7 @@ export default {
     data() {
         return {
             volumeId: biigle.$require("ptp.volumeId"),
-            manualUrl: biigle.$require("ptp.ptpManualUrl"),
+            /*manualUrl: biigle.$require("ptp.ptpManualUrl"),*/
         };
     },
 
@@ -72,7 +65,7 @@ export default {
     },
 
     created() {
-        if (biigle.$require("volumes.ptpIsRunning") === true) {
+        if (biigle.$require("ptp.isRunning") === true) {
             this.startLoading();
         }
     }

@@ -1,93 +1,73 @@
-<div >
-    <h3>Create a new PTP job <a class="btn btn-default btn-xs pull-right" href="{{route('manual-tutorials', ['ptp', 'about'])}}" title="More information on MAIA" target="_blank"><i class="fas fa-info-circle"></i></a></h3>
+<div>
+    <h3>Create a new PTP job
+        <a
+            href="{{  route("manual-tutorials", ["ptp", "ptp"]) }}"
+            target="_blank"
+            class="btn btn-default btn-xs pull-right"
+            title="More information on PTP">
+
+            <span class="fa fa-info-circle" aria-hidden="true"></span>
+        </a>
+    </h3>
+
     <p>
-       Insgesamte anzahl der punkte: {{ $pointCount }}
+        The Magic SAM point conversion tool allows you to convert existing point annotations of a whole image
+        volume to polygons.
+        <br>
+        <br>
+        Depending on the count of points to convert, a job can run for many hours or even a day.
+        Please choose your settings carefully before you submit a new job.
+        Overall points to convert in this volume: {{ $pointCount }}.
     </p>
 
 
-    <form > <!--- submit an ptp api dann  später-->
+    <form>
         <fieldset>
-            <legend>konvertierungs sam</legend>
+            <legend>Scope of conversion</legend>
             <div>
-                 INFO TEXT, Fragen ob nach Labels selektiert werden soll. STANDARD: ALLE
+                Choose which points in this volume you want to include in the conversion:
             </div>
-           {{-- <div class="form-group">
+        </fieldset>
+
+        <!--- Conversion options --->
+        <fieldset>
+            <div class="form-group">
                 <div class="radio">
                     <label for="point_to_polygon_sam">
-                        <input type="radio" id="point_to_polygon_sam" name="conversion_method" value="sam" >
-                        <strong>Point to polygon pics</strong>--}}
+                        <input type="radio" id="include_converted_points_sam" name="converted_points_sam" value="included">
+                        <strong>Convert all points</strong>
                         <div class="help-block">
-                           irgendwas als hilfe. <a href="{{route('manual-tutorials', ['sam', 'novelty-detection'])}}">More information.</a>
+                            Converts all point annotations in this volume, including points that were successfully converted
+                            in previous jobs. All existing permanent polygon annotations are kept.
                         </div>
-                   {{-- </label>
+                    </label>
                 </div>
-            </div>--}}
-        </fieldset>
-
-        <fieldset >
-
-
-            <div id="ptp-label-selector"></div>
-
-            <div class="form-group">
-                <label for="nd_clusters">Min Max Threshold</label>
-                <select class ="form-control">
-                    <option> 1 </option>
-                    <option> 2 </option>
-                </select>
             </div>
 
-            <div class="form-group">
-                <label for="nd_clusters">Ignore converted points</label>
-                <select class ="form-control">
-                    <option> yes </option>
-                    <option> n </option>
-                </select>
-            </div>
 
             <div class="form-group">
-                <label for="nd_clusters">Nrfergg</label>
-                <select class ="form-control">
-                    <option> Option1 </option>
-                    <option> Option2 </option>
-                    <option> Option3 </option>
-                </select>
+                <div class="radio">
+                    <label for="point_to_polygon_sam">
+                        <input type="radio" id="ignore_converted_points_sam" name="converted_points_sam" value="ignored" checked>
+                        <strong>Ignore already converted points</strong>
+                        <div class="help-block">
+                            Only converts the points which do not have an accepted permanent polygon. Previously failed
+                            or rejected point conversions are processed again.
+                            All existing permanent polygon annotations are kept.
+                        </div>
+
+                    </label>
+                </div>
             </div>
 
+
+            <div id="ptp-label-selector"></div> <!--TODO !-->
 
         </fieldset>
 
+        <!--- Create job Button --->
+        <div id="ptp-job-form"></div>
 
-
-        <div id="ptp-job-form">
-
-
-        </div>
-
-
-
-
-
-
-
-
-     {{--   @if (!$user->can('sudo'))
-            <button type="submit" class="btn btn-success pull-right" disabled>Create job</button>
-        @else
-            <button type="submit" class="btn btn-success pull-right" :disabled="canSubmit || null">Create job</button>
-        @endif
---}}
 
     </form>
-
-
 </div>
-
-@push('scripts')
-    <script type="module">
-
-
-    </script>
-@endpush
-
-
