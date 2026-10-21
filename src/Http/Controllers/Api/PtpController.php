@@ -47,12 +47,20 @@ class PtpController extends Controller
             abort(400, 'Another point to polygon conversion job is running in this volume!');
         }
 
+        //PtpJobApi.save
+        if ($request->input("converted_points_sam") === "ignored" || $request->input("converted_points_sam") === "included") {
+            $options_param = $request->input("converted_points_sam");
+        } else {
+            return response()->json(["message" => "Invalid conversion option."], 400);
+        }
+
         $pointShapeId = Shape::pointId();
         $annotationsExist = ImageAnnotation::join('images', 'image_annotations.image_id', '=', 'images.id')
             ->where('images.volume_id', $volumeId)
             ->where('image_annotations.shape_id', $pointShapeId)
             ->exists();
 
+        //Case: no point annotations in image
         if (!$annotationsExist) {
             abort(400, 'No point annotations to convert!');
         }
@@ -62,13 +70,12 @@ class PtpController extends Controller
             $ptpJob = PtpJobModel::create([
                 'volume_id' => $volumeId,
                 "status" => "pending",
-                "options_params" => ["label" => []],
+                "options_params" => ["already_converted" => $options_param],
             ]); #obj + db eintrag
 
 
             $jobId = $this->setUniquePtpJob($volume); #NICHT DAS TODO ? vlt umbenennen
             $job = new PtpJob($volume, $request->user(), $jobId, $ptpJob->id);
-        #    $job = new PtpJob($volume, $request->user(), $jobId);
             Queue::connection(config('ptp.job_connection'))
                 ->pushOn(config('ptp.job_queue'), $job);
         } catch (Exception $e) {
