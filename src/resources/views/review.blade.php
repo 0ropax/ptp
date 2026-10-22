@@ -1,5 +1,4 @@
-
-@extends('app')
+@extends("app")
 @section('title', "ppt review")
 
 @push('scripts')

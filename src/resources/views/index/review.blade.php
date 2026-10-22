@@ -1,6 +1,11 @@
 
 @section("full-navbar", true)
 
+
+
+
+
+
 <div class="sidebar-container__content">
 
 {{--    @foreach($ptpAnnotations as $ptpAnnotation)
@@ -51,10 +56,116 @@
         </label-trees>
 
 
+    </sidebar-tab>
+
+
+
+
+
+    <sidebar-tab
+        name="information"
+        icon="information"
+        title="Job information">
+
+        <div>
+
+        <p>
+            Job #{{  $ptpJob->id  }}
+
+
+            @if ($ptpJob->status === "waiting-for-review" || $ptpJob->status === "review-completed")
+                <span class="label label-success">conversion finished</span>
+            <br>
+                Status: {{  $ptpJob->status }}
+
+            @elseif($ptpJob->status === "failed" )
+                <span class="label label-failed">conversion failed</span>
+            @else
+                <span class="label label-default">not finished</span>
+            @endif
+
+
+
+        </p>
+
+
+        <p>
+            created <span title="{{$ptpJob->created_at->toIso8601String()}}">{{$ptpJob->created_at->diffForHumans()}} </span>
+        </p>
+
+
+
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th colspan="2"> Job Information</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+
+
+
+
+                <tr>
+                    <td>
+                        Ignore previous conversions?
+                    </td>
+
+                    <td class="text-right">
+                        @if( $ptpJob->options_params["already_converted"] === "ignored" )
+                            <code>yes</code>
+                        @else
+                            <code>no</code>
+                        @endif
+                    </td>
+
+                </tr>
+
+
+                <tr>
+                    <td>
+                        Polygons generated
+                    </td>
+
+                    <td class="text-right">
+
+                        <code> {{  $ptpAnnotations->count() }} </code>
+                    </td>
+
+                </tr>
+
+                @if ($ptpAnnotations->count() <= 0)
+                    <tr>
+                        <td colspan="2" class="text-muted">
+                            No polygons could begenerated for this job.
+                        </td>
+                    </tr>
+                @endif
+
+
+
+                </tbody>
+            </table>
+
+
+
+
+
+
+
+        </div>
+
+
+
 
 
 
     </sidebar-tab>
+
+
 </sidebar>
 
 
