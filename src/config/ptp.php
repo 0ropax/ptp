@@ -27,6 +27,11 @@ return [
     'ptp_script' => __DIR__.'/../resources/scripts/ptp.py',
 
     /*
+    | Path to the storage disk for PTP patches and their SVG overlays.
+    */
+    "patch_storage_disk" => env("PTP_PATCH_STORAGE_DISK", "ptp"),
+
+    /*
     | Path for temporary files
     */
     'temp_dir' => sys_get_temp_dir(),
@@ -35,8 +40,6 @@ return [
     | Path to store the model checkpoint to.
     */
     'model_path' => storage_path('ptp').'/sam_checkpoint.pth',
-
-    "patch_storage_disk" => env("PTP_PATCH_STORAGE_DISK", "ptp"),
 
 
     /*

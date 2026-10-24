@@ -13,6 +13,12 @@ return new class extends Migration
      */
     public function up()
     {
+        /*
+       | A PTP job is created whenever a user wants to perform the point-to-polygon
+       | conversion for a volume using SAM. For each volume there can only be one
+       | PTP job in the 'pending' or 'in-progress' state at a time. All project
+       | editors, experts or admins can create and review PTP jobs.
+       */
         Schema::create("ptp_jobs", function (Blueprint $table) {
             $table->increments("id");
 
@@ -21,15 +27,11 @@ return new class extends Migration
                 ->references("id")
                 ->on("volumes");
 
-
             $table->string("status");
-            $table->json("options_params");
+            $table->json("conversion_options");
             $table->timestamps();
         });
     }
-
-    #TODO : nutzer später noch hinzufügen vielleicht
-    #$table->integer("user_id")->unsigned();
 
     /**
      * Reverse the migrations.
