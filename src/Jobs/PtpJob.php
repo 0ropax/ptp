@@ -114,6 +114,7 @@ class PtpJob extends BaseJob implements ShouldQueue
     {
         \Log::info("PTP_HANDLE");
      /*   throw new Exception("PTP_FAILED_TESTEN"); */
+        // TODO ! public zu protected in den klassen
 
         DB::transaction(function () {
 
