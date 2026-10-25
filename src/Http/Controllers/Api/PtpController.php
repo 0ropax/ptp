@@ -4,14 +4,15 @@ namespace Biigle\Modules\Ptp\Http\Controllers\Api;
 
 use Biigle\Http\Controllers\Api\Controller;
 use Biigle\ImageAnnotation;
-use Biigle\Modules\Ptp\Jobs\PtpJob;
 use Biigle\Shape;
 use Biigle\Volume;
 use Exception;
 use Illuminate\Http\Request;
 use Queue;
 use Ramsey\Uuid\Uuid;
+use Biigle\Modules\Ptp\Support\PtpPointQuery;
 
+use Biigle\Modules\Ptp\Jobs\PtpJob as PtpConversionJob;
 use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 
 /**
@@ -26,7 +27,9 @@ class PtpController extends Controller
      * @apiGroup Volumes
      * @apiName StorePtpJob
      * @apiPermission projectEditor
-     * @apiDescription This will start a Magic SAM point conversion job for all point annotations in the volume. This is not available for volumes with very large images and video volumes. Only one job can be submitted at a time for each volume.
+     * @apiDescription This will start a Magic SAM point conversion job for all point annotations in the volume.
+     * This is not available for volumes with very large images and video volumes.
+     * Only one job can be submitted at a time for each volume.
      *
      * @apiParam {Number} id The volume ID.
      *
@@ -47,77 +50,47 @@ class PtpController extends Controller
             abort(400, 'Another point to polygon conversion job is running in this volume!');
         }
 
-        //PtpJobApi.save
+        // Conversion choice radio buttons
         if ($request->input("converted_points_sam") === "ignored" || $request->input("converted_points_sam") === "included") {
             $options_param = $request->input("converted_points_sam");
         } else {
             return response()->json(["message" => "Invalid conversion option."], 400);
         }
 
-        $pointShapeId = Shape::pointId();
-        $annotationsExist = ImageAnnotation::join('images', 'image_annotations.image_id', '=', 'images.id')
-            ->where('images.volume_id', $volumeId)
-            ->where('image_annotations.shape_id', $pointShapeId)
-            ->exists();
-
-
-        //Total point annotation count
-        $totalPointCount = ImageAnnotation::join("images", "image_annotations.image_id", "=", "images.id")
-            ->where("images.volume_id", $volume->id)
-            ->where("image_annotations.shape_id", Shape::pointId())
-            ->count();
-
-        //Remaining point annotation count
-        $successfulPolygonIds = PtpJobModel::join("ptp_annotations", "ptp_annotations.ptp_job_id", "=", "ptp_jobs.id")
-            ->where("ptp_jobs.volume_id", $volume->id)
-            ->whereNotNull("ptp_annotations.annotation_id")
-            ->distinct()
-            ->pluck("ptp_annotations.source_annotation_id");
-
-        $remainingPointCount = ImageAnnotation::join("images", "image_annotations.image_id", "=", "images.id")
-            ->where("images.volume_id", $volume->id)
-            ->where("image_annotations.shape_id", Shape::pointId())
-            ->whereNotIn("image_annotations.id", $successfulPolygonIds)
-            ->count();
-
-
-
-        //Case: no point annotations in image
-        if (!$annotationsExist) {
-            abort(400, 'No point annotations to convert!');
+        // Checks if enough points are available to start a conversion job
+        $query = PtpPointQuery::getPointsToConvert($volume, $options_param);
+        if ($query->count() <= 0) {
+            abort(400, "No point annotations to convert!");
         }
-
-
-        //Case: ignore converted points option has been selected, but remaining point count is 0
-        if ($request->input("converted_points_sam") === "ignored") {
-            if ($remainingPointCount <= 0) {
-                abort(400, "No point annotations to convert!");
-            }
-        }
-
-
-
 
 
         try {
-          #TODO !
-            $ptpJob = PtpJobModel::create([
-                'volume_id' => $volumeId,
+            // Create PTP job object and data set
+            $ptpJobEntry = PtpJobModel::create([
+                "volume_id" => $volumeId,
                 "status" => "pending",
-                "options_params" => ["already_converted" => $options_param],
-            ]); #obj + db eintrag
+                "conversion_options" => ["already_converted" => $options_param],
+            ]);
 
+            // Register PTP job for this volume
+            $jobUuid = $this->setUniquePtpJob($volume);
 
-            $jobId = $this->setUniquePtpJob($volume); #NICHT DAS TODO ? vlt umbenennen
-            $job = new PtpJob($volume, $request->user(), $jobId, $ptpJob->id);
+            // Object for queue worker
+            $job = new PtpConversionJob($volume, $request->user(), $jobUuid, $ptpJobEntry->id);
             Queue::connection(config('ptp.job_connection'))
                 ->pushOn(config('ptp.job_queue'), $job);
+
         } catch (Exception $e) {
             // If unable to dispatch a PTP Job, reset the PTP Job ID
             $attrs = $volume->attrs;
             unset($attrs['ptp_job_id']);
             $volume->attrs = $attrs;
             $volume->save();
+
+            if (isset($ptpJobEntry)) {
+                $ptpJobEntry->update(["status" => "failed"]);
+            }
+
             throw $e;
         }
     }
