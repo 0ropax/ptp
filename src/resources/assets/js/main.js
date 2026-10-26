@@ -8,8 +8,4 @@ biigle.$mount("ptp-job-form", PtpForm);
 
 biigle.$mount("ptp-label-selector", PtpLabelTreeSelector);
 
-console.log("selector mount   ", PtpLabelTreeSelector);
-
-console.log("ptp review comp ", PtpReview);
-
 biigle.$mount("ptp-review", PtpReview);
