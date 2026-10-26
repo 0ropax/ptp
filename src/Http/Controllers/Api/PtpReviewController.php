@@ -4,7 +4,6 @@ namespace Biigle\Modules\Ptp\Http\Controllers\Api;
 use Biigle\Http\Controllers\Api\Controller;
 use Biigle\ImageAnnotation;
 use Biigle\ImageAnnotationLabel;
-use Biigle\Modules\Laserpoints\Image;
 use Biigle\Modules\Ptp\PtpJob;
 use Biigle\Project;
 use Biigle\Role;
@@ -12,43 +11,42 @@ use Biigle\Shape;
 use Biigle\Volume;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use Queue;
-use Ramsey\Uuid\Uuid;
 use Biigle\LabelTree;
 use Illuminate\Support\Facades\Storage;
 use Biigle\Modules\Ptp\PtpAnnotation;
-/*use Biigle\Modules\Ptp\PtpJob as PtpJobModel;*/
 
 
 class PtpReviewController extends Controller {
 
     public function showReviewPage(Request $request, int $id) {
-/*
-        $volume = Volume::findOrFail($volumeId);
 
-
-        $this->authorize('edit-in', $volume);
-*/
-
+        //Permission check
+     /*   $volume = Volume::findOrFail($id);*/
         $ptpJob = PtpJob::findOrFail($id);
         $volume = $ptpJob->volume;
 
+        //ptp seite wird blockiert für gäste
+        if (!$request->user()->can("sudo")) {
+            $this->authorize("edit-in", $volume);
+        }
 
 
+    /*    if (!$volume->isImageVolume() || $volume->hasTiledImages()) {
+            abort(Response::HTTP_NOT_FOUND);
+        }*/
 
-/*
-        $patchUrlTemplate = Storage::disk(config('ptp.patch_storage_disk'))
-            ->url(':prefix/:id.'.config('largo.patch_format'));*/
+    /*
+    vorher, aber dann unfunktional weil nicht genau wie bei maia
+       $patchUrlTemplate = Storage::disk(config('ptp.patch_storage_disk'))
+            ->url(':prefix/:id.'.config('largo.patch_format')); #weil ptp sotrage var/www/storage/ptp
 
-        $patchUrlTemplate = Storage::disk(config('ptp.patch_storage_disk'))
-            ->url(':uuid/:id.'.config('largo.patch_format')); #weil ptp sotrage var/www/storage/ptp
-#fragment uuid path TODO
-
-        \Log::info("PTP_PATCH_URL_TEMPLATE", ["url" => $patchUrlTemplate, "id" => $id]);
+        \Log::info("PTP_PATCH_URL_TEMPLATE", ["url" => $patchUrlTemplate, "id" => $id]);*/
 
 
         $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
+            ->whereHas("sourceAnnotation")
             ->with(["sourceAnnotation.image", "sourceAnnotation.labels"]) #zu jedem kandidaten die bild infos
             ->get();
 
@@ -86,26 +84,46 @@ class PtpReviewController extends Controller {
 
         return view('ptp::review', ["ptpJob" => $ptpJob, "volume" => $volume, "ptpAnnotations" => $ptpAnnotations, "labelTrees" => $labelTrees,]);
 
-
-
-
-
     }
 
 
-
+    // TODO ! kommentare
+    //zieht bilder ausm ptp storage, liefert aus
     public function showPatch(Request $request, string $uuid, int $id, ?string $type = null) {
+
+        $ptpAnnotation = PtpAnnotation::findOrFail($id);
+        $source = $ptpAnnotation->sourceAnnotation;
+
+        if ($source === null) {
+            //noch unsicher wegen löschlogik, sonst image id in db
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        $image = $source->image;
+        $volume = $image->volume;
+
+
+        if (!$request->user()->can("sudo")) {
+            $this->authorize("edit-in", $volume);
+        }
+
+        if ($image->uuid !== $uuid) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
         if ($type === "svg") {
             $format = "svg";
         } else {
             $format = config("largo.patch_format");
         }
 
+        $prefix = fragment_uuid_path($uuid);
+        $path = "{$prefix}/{$id}.{$format}";
 
+        //id ptp vorschlag in ptp anno db,
+      /*  $path = "{$uuid}/{$id}.{$format}";*/
 
-        $path = "{$uuid}/{$id}.{$format}";
-
-        return Storage::disk(config('ptp.patch_storage_disk'))->response($path);
+        return Storage::disk(config('ptp.patch_storage_disk'))->response($path); //targetDisk string machen TODO
 
     }
 
@@ -113,25 +131,24 @@ class PtpReviewController extends Controller {
     public function review(Request $request, int $id) {
         \Log::info("PTP_REVIEW_REJECTED", ["jobid" => $id, "rejected" => $request->input("rejected")]);
 
-        #TODO ! hier dann db abfrage nach annotation id
+        $ptpJob = PtpJob::findOrFail($id);
+        $volume = $ptpJob->volume;
 
-        $rejIds = $request->input("rejected", []);
+        if (!$request->user()->can("sudo")) {
+            $this->authorize("edit-in", $volume);
+        }
 
-   /*     $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)->get();*/
 
-     /*   $annotation = PtpAnnotation::findOrFail($rejIds);*/
-
-#einmal tesweis emarkieren
-  /*      PtpAnnotation::where("ptp_job_id", $id)
-            ->whereIn("id", $rejIds)
-            ->update([
-           "annotation_id" => 1,
-
-        ]);*/
+        $rejIds = $request->input("rejected", []); //array noch sichern? TODO !
 
 
 
-        DB::transaction(function () use ($id, $rejIds, $request) {
+        //das auch noch sichern?
+        $result = DB::transaction(function () use ($id, $rejIds, $request) {
+            $accepted = 0;
+            $skippedDeleted = 0;
+            $skippedUnlabeled = 0;
+
             $job = PtpJob::where("id", $id)
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -150,11 +167,27 @@ class PtpReviewController extends Controller {
 
 
             foreach ($accepThumbnails as $accTh) {
+
+                //accth ptp anno obj , hier die image id auch wieder besser
+                $source = $accTh->sourceAnnotation;
+                if ($source === null) {
+                    $skippedDeleted++;
+                    continue;
+                }
+
+                $label = $source->labels->first();
+
+                if ($label === null) {
+                    $skippedUnlabeled++;
+                    continue;
+                }
+
+
                 \Log::info("PTP_annoDB", []);
                 $imageAnno = new ImageAnnotation();
 
                 $imageAnno->points = $accTh->points;
-                $imageAnno->image_id = $accTh->sourceAnnotation->image_id;
+                $imageAnno->image_id = $source->image_id;
                 $imageAnno->shape_id = Shape::polygon()->id;
 
                 $imageAnno->save();
@@ -168,12 +201,14 @@ class PtpReviewController extends Controller {
 
                 $imageAnnoL->annotation_id = $imageAnno->id;
 
-                $imageAnnoL->label_id = $accTh->sourceAnnotation->labels->first()->label_id;
+                $imageAnnoL->label_id = $label->label_id;
 
                 $imageAnnoL->user_id = $request->user()->id;
 
                 $imageAnnoL->confidence = 1.0;
                 $imageAnnoL->save();
+
+                $accepted++;
 
 
             }
@@ -181,64 +216,12 @@ class PtpReviewController extends Controller {
             $job->status ="review-completed";
             $job->save();
 
+            return [ "accepted" => $accepted, "skipped_deleted" => $skippedDeleted, "skipped_unlabeled" => $skippedUnlabeled];
 
             });
 
-
-
-
-/*
-        $accepThumbnails = PtpAnnotation::where("ptp_job_id", $id)
-            ->whereNotIn("id", $rejIds)
-            ->get();
-
-
-
-
-
-
-
-        /*    $imageAnno = ImageAnnotation::create([*/ #geht nicht wegen Mass Assignment, insert umgeht fillable aber gibt keine id
-
-
-/*
-                "points" => $accTh->points,
-
-                "image_id" => $accTh->sourceAnnotation->image_id,
-
-                "shape_id" => Shape::polygon()->id,*/
-
-              /*  "created_at" => $now,
-                "updated_at" => $now,*/
-
-
-                # TODO ! image_annotation_labels db eintrag
-
-     /*       ]);*/
-
-         /*   $newAnnotationId = $imageAnno->id;
-            \Log::info("PTP_annoZeile1", []);
-            \Log::info("PTP_anno1", ["id" => $newAnnotationId]);
-
-            $accTh->annotation_id = $newAnnotationId;
-            \Log::info("PTP_annoDB_vorSAVE", []);
-
-            $accTh->save();
-
-        }*/
-
-     /*   $notNull = PtpAnnotation::where("ptp_job_id", $id)
-            ->where("annotation_id" != null);
-
-        if ($notNull->count() > 0) {
-            ImageAnnotation::insert($notNull->toArray());
-        }*/
-
-
-
+        return response()->json($result);
 
     }
-
-
 
 }

@@ -55,6 +55,7 @@ class PtpViewController extends Controller {
         $successfulPolygonIds = PtpJobModel::join("ptp_annotations", "ptp_annotations.ptp_job_id", "=", "ptp_jobs.id")
                                 ->where("ptp_jobs.volume_id", $volume->id)
                                 ->whereNotNull("ptp_annotations.annotation_id")
+                                ->whereNotNull("ptp_annotations.source_annotation_id")
                                 ->distinct()
                                 ->pluck("ptp_annotations.source_annotation_id");
 
@@ -91,27 +92,6 @@ class PtpViewController extends Controller {
             })
             ->get();
 
-
-
-       /*
-        * Das auch nochmal angucken vom LargoController TODO !
-       $labelTrees = $project->labelTrees()
-            ->select('id', 'name', 'version_id')
-            ->with('labels', 'version')
-            ->get();
-
-        $patchUrlTemplate = Storage::disk(config('largo.patch_storage_disk'))
-            ->url(':prefix/:id.'.config('largo.patch_format'));
-
-        $shapes = Shape::pluck('name', 'id');
-
-        return view('largo.project', [
-            'project' => $project,
-            'labelTrees' => $labelTrees,
-            'target' => $project,
-            'patchUrlTemplate' => $patchUrlTemplate,
-            'shapes' => $shapes,
-        ]);*/
 //// TODO ! für den nutzer einschränken welche labels wegen den rechten und deswegen auch point count anpassen
 
 
