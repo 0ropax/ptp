@@ -34,7 +34,8 @@
         </div>
 
 
-        <div id="ptp-label-selector"></div> <!--TODO !-->
+        <!--- SPAETER TODO --->
+<!--        <div id="ptp-label-selector"></div>  -->
 
     </fieldset>
 

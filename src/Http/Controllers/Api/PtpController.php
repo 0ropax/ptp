@@ -51,14 +51,17 @@ class PtpController extends Controller
         }
 
         // Conversion choice radio buttons
-        if ($request->input("converted_points_sam") === "ignored" || $request->input("converted_points_sam") === "included") {
-            $options_param = $request->input("converted_points_sam");
+        $conversion_choice = $request->input("converted_points_sam");
+
+        if ($conversion_choice === "ignored" || $conversion_choice === "included") {
+            $options_param = $conversion_choice;
         } else {
-            return response()->json(["message" => "Invalid conversion option."], 400);
+            abort(400, "Invalid conversion option");
         }
 
         // Checks if enough points are available to start a conversion job
         $query = PtpPointQuery::getPointsToConvert($volume, $options_param);
+
         if ($query->count() <= 0) {
             abort(400, "No point annotations to convert!");
         }
@@ -69,7 +72,7 @@ class PtpController extends Controller
             $ptpJobEntry = PtpJobModel::create([
                 "volume_id" => $volumeId,
                 "status" => "pending",
-                "conversion_options" => ["already_converted" => $options_param],
+                "conversion_options" => ["already_converted_points" => $options_param],
             ]);
 
             // Register PTP job for this volume

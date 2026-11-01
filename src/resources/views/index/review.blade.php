@@ -115,7 +115,7 @@
                     </td>
 
                     <td class="text-right">
-                        @if( $ptpJob->conversion_options["already_converted"] === "ignored" )
+                        @if( $ptpJob->conversion_options["already_converted_points"] === "ignored" )
                             <code>yes</code>
                         @else
                             <code>no</code>

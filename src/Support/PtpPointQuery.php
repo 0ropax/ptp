@@ -24,7 +24,7 @@ class PtpPointQuery {
      * @return Builder
      */
     public static function getPointsToConvert(Volume $volume, string $conversionOption): Builder {
-        $conversionOption = "included";
+        /*$conversionOption = "included";*/
 
         // All point annotations in volume
         $query = ImageAnnotation::join("images", "image_annotations.image_id", "=", "images.id")

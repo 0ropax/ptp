@@ -15,7 +15,7 @@
 @push("scripts")
     <script type="module">
         biigle.$declare("ptp.volumeId", {!!  $volume->id !!});
-        biigle.$declare("ptp.labelTrees", {!! $labelTrees->toJson() !!});
+ //biigle.$declare("ptp.labelTrees", { !! $labelTrees->toJson() !!});
         biigle.$declare("ptp.isRunning", @json(isset($volume->attrs["ptp_job_id"])));
         biigle.$declare("ptp.totalPointCount", @json($totalPointCount));
         biigle.$declare("ptp.remainingPointCount", @json($remainingPointCount));

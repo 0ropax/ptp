@@ -6,7 +6,6 @@ use Biigle\Shape;
 use Illuminate\Support\Facades\Storage;
 use Biigle\Modules\Ptp\PtpAnnotation;
 use FileCache;
-use Biigle\Jobs\Job;
 use Biigle\VolumeFile;
 use Illuminate\Queue\SerializesModels;
 use Biigle\Image;
@@ -18,19 +17,17 @@ use Jcupitt\Vips\Image as VipsImage;
 use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 
 
-#vorscaubilder erzeugen
-#
-
+/**
+ *
+ */
 class PtpPatchJob extends ProcessAnnotatedImage {
 
     use SerializesModels;
 
-    #welches bild und welcher job
+
     public function __construct( public Image $image, public int $ptpJobId) {
         parent::__construct(
             file: $image,
-            skipFeatureVectors: true,
-            skipSvgs: true,
             targetDisk: config("ptp.patch_storage_disk"),
         );
     }
@@ -38,49 +35,63 @@ class PtpPatchJob extends ProcessAnnotatedImage {
     public function handle():void {
 
         // Callback
-        FileCache::get($this->image, [$this, "handlePtpFile"]); #bilder lokal holen, noch abfrage ob verfügbar?
+        FileCache::get($this->image, [$this, "handlePtpFile"]);
 
         \Log::info("PTP_PATCH_HANDLE_AFTER", ["image_id" => $this->image->id, "ptp_job_id" => $this->ptpJobId]);
     }
 
 
+    /**
+     *
+     *
+     * @param Image $image
+     * @param string $path
+     * @return void
+     * @throws \Jcupitt\Vips\Exception
+     */
     public function handlePtpFile(Image $image, string $path): void {
 
-        $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $this->ptpJobId)
-            ->whereHas("sourceAnnotation", function ($query) use ($image) {
-                $query->where("image_id", $image->id); #vlt besser doch di eimage id direkt in die DB packen
-        })->get();
+        // All possible polygon annotations belonging to this image
+        $ptpAnnotations = PtpAnnotation::join("image_annotations", "ptp_annotations.source_annotation_id", "=", "image_annotations.id")
+                ->where("ptp_annotations.ptp_job_id", $this->ptpJobId)
+                ->where("image_annotations.image_id", $image->id)
+                ->select("ptp_annotations.*")
+                ->get();
 
-
-    /*    \Log::info("PTP_FOREACH", ["image_id" => $image->id, "count" => $ptpAnnotations->count()]);*/
 
         // Only load images with annotations
         if ($ptpAnnotations->isNotEmpty()) {
+
             $vipsImage = VipsImage::newFromFile($path);
 
-            foreach($ptpAnnotations as $ptpAnnotation) {
+            foreach ($ptpAnnotations as $ptpAnnotation) {
 
                 $buffer = $this->getAnnotationPatch($vipsImage, $ptpAnnotation->points, Shape::polygon());
-                /*   \Log::info("PTP_BUFFER GESENDET");*/
 
-                $targetPath = $this->getPtpPatchPath($image, $ptpAnnotation);
-
+                $targetPath = $this->getPtpPatchTargetPath($image, $ptpAnnotation, config("largo.patch_format"));
                 $this->storePtpPatch($targetPath, $buffer);
 
 
-                $this->createPtpSvg($ptpAnnotation);
+                $this->createPtpSvg($ptpAnnotation, $image);
 
-                \Log::info("PTP_PATCH_STORAGE_DISK", [ "disk" => config("ptp.patch_storage_disk"),
-                    "path"=> $targetPath, "exists" => Storage::disk(config("ptp.patch_storage_disk"))->exists($targetPath),]);
+                /*\Log::info("PTP_PATCH_STORAGE_DISK", [ "disk" => config("ptp.patch_storage_disk"),
+                    "path"=> $targetPath, "exists" => Storage::disk(config("ptp.patch_storage_disk"))->exists($targetPath),]);*/
             }
         }
-
+    //elternjob status setzen danach TODO
         PtpJobModel::where("id", $this->ptpJobId)->update(["status" => "waiting-for-review"]); // TODO triggert zu früh weil noch nicht alle bilder durch sind
     }
 
 
-    public function createPtpSvg(PtpAnnotation $ptpAnnotation): void {
-        \Log::info("PTP_SVG_-2");
+    /**
+     * Generate and upload an SVG for the annotation.
+     *
+     * @param PtpAnnotation $ptpAnnotation
+     * @param Image $image
+     * @return void
+     * @throws Exception
+     */
+    protected function createPtpSvg(PtpAnnotation $ptpAnnotation, Image $image): void {
 
         $points = $ptpAnnotation->points;
         $shape = Shape::polygon();
@@ -103,7 +114,7 @@ class PtpPatchJob extends ProcessAnnotatedImage {
         $svgAnnotation = $this->getSVGAnnotation($points, $shape);
         $doc->addChild($svgAnnotation);
 
-        $targetPath = $this->getPtpTargetPath($this->file, $ptpAnnotation, "svg");
+        $targetPath = $this->getPtpPatchTargetPath($this->file, $ptpAnnotation, "svg");
 
         if (Storage::disk($this->targetDisk)->put($targetPath, $svg) === false) {
             throw new Exception("Failed to save svg to PTP_PATCH_STORAGE_DISK");
@@ -114,9 +125,15 @@ class PtpPatchJob extends ProcessAnnotatedImage {
     }
 
 
-
-
-    public function storePtpPatch(string $path, string $buffer): void {
+    /**
+     * Write image data to storage disk.
+     *
+     * @param string $path
+     * @param string $buffer
+     * @return void
+     * @throws Exception if
+     */
+    protected function storePtpPatch(string $path, string $buffer): void {
 
         if (Storage::disk($this->targetDisk)->put($path, $buffer) === false) {
             throw new Exception("Failed to write to PTP_PATCH_STORAGE_DISK");
@@ -126,22 +143,21 @@ class PtpPatchJob extends ProcessAnnotatedImage {
     }
 
 
-    public function getPtpTargetPath(VolumeFile $file, PtpAnnotation $ptpAnnotation, string $format): string {
+
+    /**
+     * Combines prefix, UUID and PTP-annotation-id to a storage path for the patches.
+     *
+     * @param VolumeFile $file
+     * @param PtpAnnotation $ptpAnnotation
+     * @param string $format
+     * @return string
+     */
+    protected function getPtpPatchTargetPath(VolumeFile $file, PtpAnnotation $ptpAnnotation, string $format): string {
 
         $prefix = fragment_uuid_path($file->uuid);
+
+
         return "$prefix/{$ptpAnnotation->id}.{$format}";
-    }
-
-
-    public function getPtpPatchPath(Image $image, PtpAnnotation $ptpAnnotation): string {
-
-        $format = config('largo.patch_format');
-        $targetPath = $this->getPtpTargetPath($image, $ptpAnnotation, $format);
-
-        \Log::info("PTP_TARGET_PATH", ["path" => $targetPath]);
-
-        return $targetPath;
-        #path in der main directory von der storage disk
 
     }
 

@@ -22,7 +22,7 @@
 
     <form>
         <fieldset>
-            <legend>Scope of conversion</legend>
+            <legend><br> Scope of conversion</legend>
             <div>
                 Choose which points in this volume you want to include in the conversion:
             </div>

@@ -32,7 +32,7 @@ import {  LabelTrees  } from "./import.js";
 
         data() {
             return {
-                dataLabelTrees: biigle.$require("ptp.labelTrees"), //blade declare !! labelTrees
+                dataLabelTrees: biigle.$require("ptp.labelTrees"),
             };
 
         },
@@ -44,9 +44,11 @@ import {  LabelTrees  } from "./import.js";
 
 <style scoped>
 
+/*
 :deep(.label-trees__body) {
     max-height: 300px;
     overflow-y: auto;
 }
+*/
 
 </style>
