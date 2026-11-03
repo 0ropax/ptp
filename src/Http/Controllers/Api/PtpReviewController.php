@@ -8,8 +8,6 @@ use Biigle\Modules\Ptp\PtpJob;
 use Biigle\Project;
 use Biigle\Role;
 use Biigle\Shape;
-use Biigle\Volume;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -18,48 +16,33 @@ use Illuminate\Support\Facades\Storage;
 use Biigle\Modules\Ptp\PtpAnnotation;
 
 
+/**
+ *
+ */
 class PtpReviewController extends Controller {
 
+    /**
+     *
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\View\View
+     */
     public function showReviewPage(Request $request, int $id) {
 
-        //Permission check
-     /*   $volume = Volume::findOrFail($id);*/
         $ptpJob = PtpJob::findOrFail($id);
         $volume = $ptpJob->volume;
-
-        //ptp seite wird blockiert für gäste
-        if (!$request->user()->can("sudo")) {
-            $this->authorize("edit-in", $volume);
-        }
-
-
-    /*    if (!$volume->isImageVolume() || $volume->hasTiledImages()) {
-            abort(Response::HTTP_NOT_FOUND);
-        }*/
-
-    /*
-    vorher, aber dann unfunktional weil nicht genau wie bei maia
-       $patchUrlTemplate = Storage::disk(config('ptp.patch_storage_disk'))
-            ->url(':prefix/:id.'.config('largo.patch_format')); #weil ptp sotrage var/www/storage/ptp
-
-        \Log::info("PTP_PATCH_URL_TEMPLATE", ["url" => $patchUrlTemplate, "id" => $id]);*/
-
-
-        $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
-            ->whereHas("sourceAnnotation")
-            ->with(["sourceAnnotation.image", "sourceAnnotation.labels"]) #zu jedem kandidaten die bild infos
-            ->get();
-
-
-
-       # return $ptpAnnotations; #TODO !
-        #http://localhost:8000/ptp/jobs/64/review
-
-
-
         $user = $request->user();
 
+        if (!$request->user()->can("sudo")) {
+            $this->authorize("access", $volume);
+        }
 
+        if (!$volume->isImageVolume() || $volume->hasTiledImages()) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        // Only show labels user is allowed to see
         if ($user->can('sudo')) {
             // Global admins have no restrictions.
             $projectIds = $volume->projects()->pluck('id');
@@ -82,20 +65,40 @@ class PtpReviewController extends Controller {
             })
             ->get();
 
-        return view('ptp::review', ["ptpJob" => $ptpJob, "volume" => $volume, "ptpAnnotations" => $ptpAnnotations, "labelTrees" => $labelTrees,]);
+
+        $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
+            ->whereHas("sourceAnnotation")
+            ->with(["sourceAnnotation.image", "sourceAnnotation.labels"])
+            ->get();
+
+/*        return view('ptp::review', ["ptpJob" => $ptpJob, "volume" => $volume, "ptpAnnotations" => $ptpAnnotations, "labelTrees" => $labelTrees,]);*/
+
+        return view('ptp::review', compact (
+            "ptpJob",
+            "volume",
+            "ptpAnnotations",
+            "labelTrees"));
 
     }
 
 
-    // TODO ! kommentare
     //zieht bilder ausm ptp storage, liefert aus
+
+    /**
+     *
+     *
+     * @param Request $request
+     * @param string $uuid
+     * @param int $id
+     * @param string|null $type
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
     public function showPatch(Request $request, string $uuid, int $id, ?string $type = null) {
 
         $ptpAnnotation = PtpAnnotation::findOrFail($id);
         $source = $ptpAnnotation->sourceAnnotation;
 
         if ($source === null) {
-            //noch unsicher wegen löschlogik, sonst image id in db
             abort(Response::HTTP_NOT_FOUND);
         }
 
@@ -104,7 +107,7 @@ class PtpReviewController extends Controller {
 
 
         if (!$request->user()->can("sudo")) {
-            $this->authorize("edit-in", $volume);
+            $this->authorize("access", $volume);
         }
 
         if ($image->uuid !== $uuid) {

@@ -41,7 +41,6 @@ return [
     */
     'model_path' => storage_path('ptp').'/sam_checkpoint.pth',
 
-
     /*
     | URL from which to download the model checkpoint.
     |
