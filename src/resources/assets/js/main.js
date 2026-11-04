@@ -6,6 +6,6 @@ import PtpReview from "./ptpReview.js";
 
 biigle.$mount("ptp-job-form", PtpForm);
 
-biigle.$mount("ptp-label-selector", PtpLabelTreeSelector);
+/*biigle.$mount("ptp-label-selector", PtpLabelTreeSelector);*/
 
 biigle.$mount("ptp-review", PtpReview);

@@ -66,10 +66,15 @@ class PtpReviewController extends Controller {
             ->get();
 
 
-        $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
+        /*$ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
             ->whereHas("sourceAnnotation")
             ->with(["sourceAnnotation.image", "sourceAnnotation.labels"])
+            ->get();*/
+
+        $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
+            ->with(["image", "label"])
             ->get();
+            //with noch am besten statt join für performance, weil image uuid sowieso für die thumbns nötig
 
 /*        return view('ptp::review', ["ptpJob" => $ptpJob, "volume" => $volume, "ptpAnnotations" => $ptpAnnotations, "labelTrees" => $labelTrees,]);*/
 
@@ -96,13 +101,7 @@ class PtpReviewController extends Controller {
     public function showPatch(Request $request, string $uuid, int $id, ?string $type = null) {
 
         $ptpAnnotation = PtpAnnotation::findOrFail($id);
-        $source = $ptpAnnotation->sourceAnnotation;
-
-        if ($source === null) {
-            abort(Response::HTTP_NOT_FOUND);
-        }
-
-        $image = $source->image;
+        $image = $ptpAnnotation->image;
         $volume = $image->volume;
 
 
@@ -122,9 +121,6 @@ class PtpReviewController extends Controller {
 
         $prefix = fragment_uuid_path($uuid);
         $path = "{$prefix}/{$id}.{$format}";
-
-        //id ptp vorschlag in ptp anno db,
-      /*  $path = "{$uuid}/{$id}.{$format}";*/
 
         return Storage::disk(config('ptp.patch_storage_disk'))->response($path); //targetDisk string machen TODO
 
@@ -149,7 +145,8 @@ class PtpReviewController extends Controller {
         //das auch noch sichern?
         $result = DB::transaction(function () use ($id, $rejIds, $request) {
             $accepted = 0;
-            $skippedDeleted = 0;
+     /*       $skippedDeleted = 0;
+            $skippedUnlabeled = 0;*/
             $skippedUnlabeled = 0;
 
             $job = PtpJob::where("id", $id)
@@ -170,27 +167,16 @@ class PtpReviewController extends Controller {
 
 
             foreach ($accepThumbnails as $accTh) {
-
-                //accth ptp anno obj , hier die image id auch wieder besser
-                $source = $accTh->sourceAnnotation;
-                if ($source === null) {
-                    $skippedDeleted++;
-                    continue;
-                }
-
-                $label = $source->labels->first();
-
-                if ($label === null) {
+                if ($accTh->label === null) {
                     $skippedUnlabeled++;
                     continue;
                 }
-
 
                 \Log::info("PTP_annoDB", []);
                 $imageAnno = new ImageAnnotation();
 
                 $imageAnno->points = $accTh->points;
-                $imageAnno->image_id = $source->image_id;
+                $imageAnno->image_id = $accTh["image_id"];
                 $imageAnno->shape_id = Shape::polygon()->id;
 
                 $imageAnno->save();
@@ -200,11 +186,13 @@ class PtpReviewController extends Controller {
 
 
                 \Log::info("PTP_annoLabelsDB", []);
+
+
                 $imageAnnoL = new ImageAnnotationLabel();
 
                 $imageAnnoL->annotation_id = $imageAnno->id;
 
-                $imageAnnoL->label_id = $label->label_id;
+                $imageAnnoL->label_id = $accTh["label_id"];
 
                 $imageAnnoL->user_id = $request->user()->id;
 
@@ -219,7 +207,7 @@ class PtpReviewController extends Controller {
             $job->status ="review-completed";
             $job->save();
 
-            return [ "accepted" => $accepted, "skipped_deleted" => $skippedDeleted, "skipped_unlabeled" => $skippedUnlabeled];
+            return [ "accepted" => $accepted, "skipped_unlabeled" => $skippedUnlabeled /*"skipped_deleted" => $skippedDeleted, "skipped_unlabeled" => $skippedUnlabeled*/];
 
             });
 

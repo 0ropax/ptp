@@ -13,7 +13,7 @@ export default {
         },
         overlayUrl() {
           /*  return this.image.overlayUrl;*/
-            return `/ptp/patches/${this.image.source_annotation.image.uuid}/${this.image.id}/svg`;
+            return `/ptp/patches/${this.image.image.uuid}/${this.image.id}/svg`;
         },
 
         locked() {
@@ -33,7 +33,7 @@ export default {
 
     methods: {
         getThumbnailUrl() {
-            return `/ptp/patches/${this.image.source_annotation.image.uuid}/${this.image.id}`;
+            return `/ptp/patches/${this.image.image.uuid}/${this.image.id}`;
         },
     },
 

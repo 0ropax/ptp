@@ -52,11 +52,15 @@ class PtpPatchJob extends ProcessAnnotatedImage {
     public function handlePtpFile(Image $image, string $path): void {
 
         // All possible polygon annotations belonging to this image
-        $ptpAnnotations = PtpAnnotation::join("image_annotations", "ptp_annotations.source_annotation_id", "=", "image_annotations.id")
+        /*$ptpAnnotations = PtpAnnotation::join("image_annotations", "ptp_annotations.source_annotation_id", "=", "image_annotations.id")
                 ->where("ptp_annotations.ptp_job_id", $this->ptpJobId)
                 ->where("image_annotations.image_id", $image->id)
                 ->select("ptp_annotations.*")
-                ->get();
+                ->get();*/
+
+        $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $this->ptpJobId)
+            ->where("image_id", $image->id)
+            ->get();
 
 
         // Only load images with annotations

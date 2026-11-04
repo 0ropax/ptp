@@ -293,6 +293,14 @@ class PtpJob extends BaseJob implements ShouldQueue
             \Log::info("PTP_CSV_RESULT", ["job_id" => $this->ptpJobEntryId,
                 "source_id" => $annotation["annotation_id"],
                 "image_id"=> $annotation["image_id"],]);*/
+/*
+
+            if ($annotation["annotation_id"] === 816) {
+                \Log::info("PTP_CSV_MULTLABEL", ["source_anno_id" => $annotation["annotation_id"],
+                    "label_id" => $annotation["label_id"], "image_id" => $annotation["image_id"],
+                    )]);
+            }*/
+
 
             $now = Carbon::now();
 
@@ -307,6 +315,8 @@ class PtpJob extends BaseJob implements ShouldQueue
 
             $newPtpAnnotation = [
                 "ptp_job_id" => $this->ptpJobEntryId,
+                "image_id" => $annotation["image_id"],
+                "label_id" => $annotation["label_id"],
                 "annotation_id" => null,
                 "source_annotation_id" => $annotation["annotation_id"],
                 'points' => json_encode($annotation['points']),
@@ -341,9 +351,13 @@ class PtpJob extends BaseJob implements ShouldQueue
         ///
 
 
+
+
         if (count($insertAnnotations) > 0) {
             $this->insertAnnotationChunk($insertAnnotations, $insertAnnotationLabels);
         }
+
+
     }
     /**
      * Insert annotation in the DB

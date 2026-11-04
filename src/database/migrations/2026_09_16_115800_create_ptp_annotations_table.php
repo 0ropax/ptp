@@ -23,6 +23,12 @@ return new class extends Migration
                 ->on("ptp_jobs")
                 ->onDelete("cascade");
 
+            $table->integer("image_id");
+            $table->foreign("image_id")
+                ->references("id")
+                ->on("images")
+                ->onDelete("cascade");
+
 
             // Deleting the original point annotation sets this reference to null.
             // The generated PTP annotation with polygon coordinates are kept.
@@ -38,6 +44,13 @@ return new class extends Migration
             $table->foreign("annotation_id")
                 ->references("id")
                 ->on("image_annotations")
+                ->onDelete("set null");
+
+
+            $table->integer("label_id")->nullable();
+            $table->foreign("label_id")
+                ->references("id")
+                ->on("labels")
                 ->onDelete("set null");
 
 

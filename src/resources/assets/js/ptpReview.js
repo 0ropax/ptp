@@ -105,11 +105,8 @@ export default {
             const filtered = [];
 
             for (const annotation of this.annotations) {
-                for (const label of annotation.source_annotation.labels) {
-                    if (label.label_id === this.selectedLabel.id) {
-                        filtered.push(annotation);
-                        break;
-                    }
+                if (annotation.label_id === this.selectedLabel.id) {
+                    filtered.push(annotation);
                 }
             }
 

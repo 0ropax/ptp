@@ -5,6 +5,8 @@ namespace Biigle\Modules\Ptp;
 
 use Illuminate\Database\Eloquent\Model;
 use Biigle\ImageAnnotation;
+use Biigle\Image;
+use Biigle\Label;
 
 /**
  * TODO
@@ -37,6 +39,21 @@ class PtpAnnotation extends Model
     public function job() {
 
         return $this->belongsTo(PtpJob::class, "ptp_job_id");
+    }
+
+    /**
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function image() {
+
+        return $this->belongsTo(Image::class, "image_id");
+    }
+
+
+    public function label() {
+
+        return $this->belongsTo(Label::class, "label_id");
     }
 
     /**
