@@ -36,4 +36,5 @@ $router->group([
 ], function ($router) {
     $router->post('send-ptp-job/{id}', 'PtpController@store');
     $router->post("ptp-jobs/{id}/review", "PtpReviewController@review");
+    $router->delete("ptp-jobs/{id}", "PtpReviewController@destroy");
 });

@@ -1,30 +1,16 @@
-
 @section("full-navbar", true)
-
-
-
-
 
 
 <div class="sidebar-container__content">
 
-{{--    @foreach($ptpAnnotations as $ptpAnnotation)
-        <img
-            src="/ptp/patches/{{  $ptpAnnotation->sourceAnnotation->image->uuid }}/{{$ptpAnnotation->id}}">
-
-    @endforeach--}}
 
     <ptp-patch-grid
-        {{--:images="annotations"--}}
         :images="filteredAnnotations"
         empty-url="{{ asset(config("thumbsnails.empty_url")) }}"
         :selectable="true"
         selected-icons="times"
         v-on:select="handleSelect">
-
     </ptp-patch-grid>
-
-
 
 
 </div>
@@ -34,12 +20,13 @@
     <sidebar-tab
         name="review"
         icon="tags"
-        title="Review">
+        title="Label trees">
 
         {{--<p> IRGENDWAS </p>--}}
         <button
             type="button"
             class="btn btn-success btn-block"
+            style="margin-bottom: 10px;"
             @click="finishReviewPtp">
                {{-- onClick="alert('A')"--}}
             Finish review
@@ -64,34 +51,36 @@
 
     <sidebar-tab
         name="information"
-        icon="information"
+        icon="info-circle"
         title="Job information">
 
-        <div>
-
-        <p>
-            Job #{{  $ptpJob->id  }}
-
-
-            @if ($ptpJob->status === "waiting-for-review" || $ptpJob->status === "review-completed")
-                <span class="label label-success">conversion finished</span>
-            <br>
-                Status: {{  $ptpJob->status }}
-
-            @elseif($ptpJob->status === "failed" )
-                <span class="label label-failed">conversion failed</span>
-            @else
-                <span class="label label-default">not finished</span>
-            @endif
+        <div class="sidebar-tab__content sidebar-tab__content--ptp">
+            <div class="ptp-job-tab__top">
+            <p>
+                Job #{{  $ptpJob->id  }}
 
 
+                @if ($ptpJob->status === "waiting-for-review" || $ptpJob->status === "review-completed")
+                    <span class="label label-success">conversion finished</span>
 
-        </p>
+                <br>
+                    created <span title="{{$ptpJob->created_at->toIso8601String()}}">{{$ptpJob->created_at->diffForHumans()}}. </span>
+                    <br>
 
 
-        <p>
-            created <span title="{{$ptpJob->created_at->toIso8601String()}}">{{$ptpJob->created_at->diffForHumans()}} </span>
-        </p>
+                <br>
+                    Status: {{  $ptpJob->status }}
+
+                @elseif($ptpJob->status === "failed" )
+                    <span class="label label-failed">conversion failed</span>
+                @else
+                    <span class="label label-default">not finished</span>
+                @endif
+
+            </p>
+
+
+
 
 
 
@@ -150,13 +139,30 @@
                 </tbody>
             </table>
 
+            </div>
 
 
 
+            <!--- JOB LSÖCHEN   --->
 
+            @if ($ptpJob->status === "pending" || $ptpJob->status === "in-progress")
+                <button class="btn btn-danger" type="button" title="The job cannot be deleted while the conversion is running" disabled> Delete this job </button>
+
+            @elseif ($ptpJob->status === "review-completed")
+                <button class="btn btn-danger" type="button" title="The job cannot be deleted after the review was finished" disabled> Delete this job </button>
+            @else
+
+                <div>
+                    <button class="btn btn-danger"
+                            @click="deletePtpJob"
+                            type="submit">Delete this job</button>
+                </div>
+            @endif
 
 
         </div>
+
+
 
 
 
@@ -168,6 +174,36 @@
 
 </sidebar>
 
+
+
+<style scoped>
+
+
+  /*  .ptp-job-tab__bottom {
+
+        margin-top: auto;
+        padding-top: 1em;
+        text-align: right;
+        flex-shrink: 0;
+    }
+
+    .sidebar-tab__content--ptp {
+        height: 100%;
+
+
+        display:flex;
+        flex-direction:column;
+    }
+
+
+
+
+    .ptp-job-tab__top {
+        flex:1;
+        min-height: 0;
+        overflow-y: auto;
+    }*/
+</style>
 
 
 {{--

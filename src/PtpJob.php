@@ -2,7 +2,7 @@
 
 namespace Biigle\Modules\Ptp;
 
-use Biigle\Modules\Laserpoints\Volume;
+use Biigle\Volume;
 use Illuminate\Database\Eloquent\Model;
 use Biigle\ImageAnnotation;
 

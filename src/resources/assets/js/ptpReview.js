@@ -62,19 +62,6 @@ export default {
 
             PtpJob.review( { id: this.jobId  }, {  rejected: rejectedIds  })
                 .then((response) => {
-
-                    const result = response.body;
-                    const messages = [`${  result.accepted  } polygons accepted.`]
-
-                    if (result.skipped_deleted > 0 ){
-                        messages.push(`${  result.skipped_deleted  } skipped because source anno was deleted.`);
-                    }
-
-                    if (result.skipped_unlabeled > 0) {
-                        messages.push(`${  result.skipped_unlabeled  } skipped because source anno has no label.`);
-                    }
-
-                    window.alert(messages.join("\n"));
                     window.location.reload();
             });
 
@@ -88,6 +75,22 @@ export default {
         handleDeselectedLabel() {
             this.selectedLabel = null;
         },
+
+        deletePtpJob() {
+            if (confirm("Are you sure that you want to delete this job?")) {
+                PtpJob.destroy( {  id:this.jobId})
+                    .then((response) => {
+
+                        //Mesage
+                    })
+                    .catch((error) => {
+                    //error message
+                });
+            }
+
+
+        },
+
 
         /*Oben das array noch wegschicen TODO !*/
     },

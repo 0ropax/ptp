@@ -19,7 +19,7 @@
 
 @section('navbar')
     <div class="navbar-text navbar-largo-breadcrumbs">
-        @include('volumes.partials.projectsBreadcrumb', ["projects" => $volume->projects]) / <a href="{{route('volume', $volume->id)}}" title="Show volume {{$volume->name}}" class="navbar-link">{{$volume->name}}</a> / <span id="largo-title">Largo / </span>
+        @include('volumes.partials.projectsBreadcrumb', ["projects" => $volume->projects]) / <a href="{{route('volume', $volume->id)}}" title="Show volume {{$volume->name}}" class="navbar-link">{{$volume->name}}</a> / <span id="largo-title">PTP / <strong> Job #{{ $ptpJob->id }} </strong> </span>
     </div>
 @endsection
 

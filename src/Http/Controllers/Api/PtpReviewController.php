@@ -215,4 +215,46 @@ class PtpReviewController extends Controller {
 
     }
 
+
+    public function destroy(Request $request, int $id) {
+
+        $ptpJob = PtpJob::findOrFail($id);
+        $volume = $ptpJob->volume;
+
+
+        if (!$request->user()->can("sudo")) {
+            $this->authorize("edit-in", $volume);
+        }
+
+        if ($ptpJob->status === "waiting-for-review" || $ptpJob->status === "failed") {
+          /*  $ptpJob->delete();*/
+            $ptpAnnotations = $ptpJob->annotations()->with("image")->get();
+
+            foreach ($ptpAnnotations  as $ptpAnnotation) {
+
+                $prefix= fragment_uuid_path($ptpAnnotation->image->uuid);
+                /*$path = "{$prefix}/{$uuidPref}.{$format}";*/
+                $format = config("largo.patch_format");
+                $path = "{$prefix}/{$ptpAnnotation->id}.{$format}";
+
+                $svgPath = "{$prefix}/{$ptpAnnotation->id}.svg";
+
+                Storage::disk(config("ptp.patch_storage_disk"))->delete([$path, $svgPath]);
+
+
+            }
+
+            $ptpJob->delete();
+
+            return response("PTP job was deleted successfully",200);
+
+
+
+        }
+
+
+    }
+
+
+
 }

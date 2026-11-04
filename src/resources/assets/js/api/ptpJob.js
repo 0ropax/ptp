@@ -6,4 +6,10 @@ export default Resource('api/v1/send-ptp-job{/id}', {}, {
         method: "POST",
         url: "api/v1/ptp-jobs{/id}/review",
     },
+
+   destroy: {
+        method: "DELETE",
+        url: "api/v1/ptp-jobs{/id}",
+    },
+
 });
