@@ -5,6 +5,7 @@
 
 
     <ptp-patch-grid
+        v-if="jobStatus === 'waiting-for-review' || jobStatus === 'review-completed'"
         :images="filteredAnnotations"
         empty-url="{{ asset(config("thumbnails.empty_url")) }}"
         :selectable="true"
@@ -13,12 +14,14 @@
     </ptp-patch-grid>
 
 
-
-    <div v-if="selectedLabel && filteredAnnotations.length === 0" class="text-info"
-    style="position:absolute; top: 50%; left:50%; transform: translate(-50%, -50%);">
-        There are no annotations with the label <strong v-text="selectedLabel.name"></strong>.
-    </div>
-
+    @if($ptpJob->status !== "pending" && $ptpJob->status !== "in-progress")
+        <div v-if="selectedLabel && filteredAnnotations.length === 0"
+             v-cloak
+             class="text-info"
+             style="position:absolute; top: 50%; left:50%; transform: translate(-50%, -50%);">
+            There are no annotations with the label <strong v-text="selectedLabel.name"></strong>.
+        </div>
+    @endif
 
 </div>
 
