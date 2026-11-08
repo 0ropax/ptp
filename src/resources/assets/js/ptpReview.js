@@ -19,6 +19,7 @@ export default {
             jobStatus: null,
             selectedLabel: null,
             labelTrees: [],
+            unsavedChangesFlag: false,
         };
     },
 
@@ -39,11 +40,14 @@ export default {
     },
 
     methods: {
+
         handleSelect(annotation) {
 
             if (this.locked) {
                 return;
             }
+
+            this.unsavedChangesFlag = true;
 
             annotation.rejected = !annotation.rejected;
 
@@ -62,6 +66,7 @@ export default {
 
             PtpJob.review( { id: this.jobId  }, {  rejected: rejectedIds  })
                 .then((response) => {
+                    this.unsavedChangesFlag = false;
                     window.location.reload();
             });
 
@@ -80,19 +85,35 @@ export default {
             if (confirm("Are you sure that you want to delete this job?")) {
                 PtpJob.destroy( {  id:this.jobId})
                     .then((response) => {
+                        this.unsavedChangesFlag = false;
+
+                        sessionStorage.setItem("ptpJobDeleted", response.body/*.message*/);
+
+                        window.location.href = `/volumes/${this.volumeId}/ptp`
+                     /*   response("PTP job was deleted successfully",200);*/
+
 
                         //Mesage
                     })
                     .catch((error) => {
                     //error message
+                      alert("The PTP job could not be deleted successfully.")
                 });
             }
 
 
         },
 
+        messageBeforePageExit(event) {
+            if (this.jobStatus === "waiting-for-review" && this.unsavedChangesFlag == true) {
+                event.preventDefault();
+                event.returnValue = "";
+            }
+            this.messageBeforePageExit;
+        },
 
-        /*Oben das array noch wegschicen TODO !*/
+
+
     },
 
     computed: {
@@ -115,6 +136,17 @@ export default {
 
             return filtered;
         }
+    },
+
+
+    mounted() {
+
+        window.addEventListener('beforeunload', this.messageBeforePageExit);
+
+    },
+
+    beforeUnmount() {
+        window.removeEventListener("beforeunload", this.messageBeforePageExit);
     },
 
 

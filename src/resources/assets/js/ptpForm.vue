@@ -1,5 +1,7 @@
 <template>
 
+
+
     <!--- Conversion options --->
     <fieldset>
         <div class="form-group">
@@ -57,6 +59,11 @@
             The job was submitted. You will be notified when it is finished.
         </p>
     </div>
+
+
+
+
+
 </template>
 
 
@@ -121,6 +128,23 @@ export default {
         if (biigle.$require("ptp.isRunning") === true) {
             this.startLoading();
         }
-    }
+    },
+
+    mounted() {
+
+        const message = sessionStorage.getItem("ptpJobDeleted");
+
+        console.log("BIIGLE 1");
+        console.log("BIIGLE 2", message);
+
+        if (message) {
+            console.log("BIIGLE NOTIFIC");
+
+            biigle.$require("messages").success(message);
+            sessionStorage.removeItem("ptpJobDeleted");
+        }
+
+
+    },
 };
 </script>

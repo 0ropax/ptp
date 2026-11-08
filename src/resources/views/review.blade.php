@@ -19,7 +19,7 @@
 
 @section('navbar')
     <div class="navbar-text navbar-largo-breadcrumbs">
-        @include('volumes.partials.projectsBreadcrumb', ["projects" => $volume->projects]) / <a href="{{route('volume', $volume->id)}}" title="Show volume {{$volume->name}}" class="navbar-link">{{$volume->name}}</a> / <span id="largo-title">PTP / <strong> Job #{{ $ptpJob->id }} </strong> </span>
+        @include('volumes.partials.projectsBreadcrumb', ["projects" => $volume->projects]) / <a href="{{route('volume', $volume->id)}}" title="Show volume {{$volume->name}}" class="navbar-link">{{$volume->name}}</a> / <a href="{{route("volumes-ptp", $volume->id)}}">PTP</a> / <strong> Job #{{ $ptpJob->id }} </strong>
     </div>
 @endsection
 
@@ -32,19 +32,6 @@
 
 
 {{--
-@push('scripts')
-    <script type="module">
-        biigle.$declare('largo.user', {!! $user !!});
-        biigle.$declare('largo.volumeId', {!! $volume->id !!});
-        biigle.$declare('largo.projectIds', {!! $projects->pluck('id') !!});
-        biigle.$declare('largo.mediaType', @if ($volume->isImageVolume()) 'image' @else 'video' @endif);
-        biigle.$declare('largo.labelTrees', {!! $labelTrees !!});
-        biigle.$declare('largo.showImageAnnotationRoute', '{{ route('show-image-annotation', '/') }}/');
-        biigle.$declare('largo.showVideoAnnotationRoute', '{{ route('show-video-annotation', '/') }}/');
-        biigle.$declare('largo.patchUrlTemplate', '{{$patchUrlTemplate}}');
-        biigle.$declare('largo.availableShapes', {!! $shapes !!})
-    </script>
-@endpush
 
 @section('navbar')
     <div class="navbar-text navbar-largo-breadcrumbs">
