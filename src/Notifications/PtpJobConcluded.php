@@ -6,6 +6,11 @@ use Biigle\Volume;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
+/**
+ * Notifies the user when the PTP conversion has finished successfully.
+ *
+ * The creation and display of the patch images may still be in progress, after the notification has been sent.
+ */
 class PtpJobConcluded extends Notification
 {
     /**
@@ -62,7 +67,7 @@ class PtpJobConcluded extends Notification
     {
         $message = (new MailMessage)
             ->subject('Magic SAM point conversion finished')
-            ->line("The Magic SAM point conversion for volume $this->volumeName has concluded successfully.");
+            ->line("The Magic SAM point conversion for volume $this->volumeName has concluded successfully. The preview for the possible annotations may still be generated.");
 
 
         if (config('app.url')) {
@@ -82,7 +87,7 @@ class PtpJobConcluded extends Notification
     {
         $array = [
             'title' => 'Magic SAM point conversion finished',
-            'message' => "The Magic SAM point conversion for volume $this->volumeName has concluded successfully.",
+            'message' => "The Magic SAM point conversion for volume $this->volumeName has concluded successfully. The preview for the possible annotations may still be generated.",
             'action' => 'Show volume',
             'actionLink' => route('volume', $this->volumeId),
         ];

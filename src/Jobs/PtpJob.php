@@ -4,7 +4,6 @@ namespace Biigle\Modules\Ptp\Jobs;
 
 use Biigle\Image;
 use Biigle\ImageAnnotation;
-use Biigle\ImageAnnotationLabel;
 use Biigle\Jobs\ProcessAnnotatedImage;
 use Biigle\Modules\Ptp\Exceptions\PythonException;
 use Biigle\Modules\Ptp\Notifications\PtpJobConcluded;
@@ -112,21 +111,22 @@ class PtpJob extends BaseJob implements ShouldQueue
      */
     public function handle()
     {
-     /*   throw new Exception("PTP_FAILED_TESTEN"); */
-        DB::transaction(function () {
 
-            $ptpJob = PtpJobModel::findOrFail($this->ptpJobEntryId);
-            $conversion_option = $ptpJob->conversion_options["already_converted_points"];
+        $ptpJob = PtpJobModel::findOrFail($this->ptpJobEntryId);
+        $conversionChoice = $ptpJob->conversion_options["already_converted_points"];
 
-            $ptpJob->status = "in-progress";
-            $ptpJob->save();
+        $ptpJob->status = "in-progress";
+        $ptpJob->save();
+
+
+        DB::transaction(function () use ($conversionChoice) {
 
             $callback = function ($images, $paths) {
                 $this->generateImageInputFile($paths, $images);
                 $this->python();
             };
-            $this->volume->images()->chunkById(static::$imageChunkSize, function ($chunk) use ($callback, $conversion_option) {
-                $imageData = $this->generateInputFile($chunk, $conversion_option);
+            $this->volume->images()->chunkById(static::$imageChunkSize, function ($chunk) use ($callback, $conversionChoice) {
+                $imageData = $this->generateInputFile($chunk, $conversionChoice);
 
                 //$imageData can be empty if we have a chunk of images without an annotation
                 if (!empty($imageData)) {
@@ -134,8 +134,7 @@ class PtpJob extends BaseJob implements ShouldQueue
                     $this->uploadConvertedAnnotations();
 
                     // Generate PTP-Patch job for each image
-                    foreach($imageData as $image) {
-                        \Log::info("PTP_PATCH DISPATCH");
+                    foreach ($imageData as $image) {
                         PtpPatchJob::dispatch($image, $this->ptpJobEntryId)->afterCommit();
                     }
 
@@ -151,10 +150,10 @@ class PtpJob extends BaseJob implements ShouldQueue
      * Generate the input File containing data for the execution of the job
      *
      * @param $chunk
-     * @param $convertedPointsSam String, either "ignored" or "included"
+     * @param string $conversionChoice either "ignored" or "included"
      * @return array
      */
-    public function generateInputFile($chunk, $convertedPointsSam): array
+    public function generateInputFile($chunk, string $conversionChoice): array
     {
         $imageAnnotationArray = [];
 
@@ -172,7 +171,7 @@ class PtpJob extends BaseJob implements ShouldQueue
         $images = [];
 
         // Search for already converted points
-        if ($convertedPointsSam === "ignored") {
+        if ($conversionChoice === "ignored") {
             $convertedPoints = PtpAnnotation::select("source_annotation_id")
                 ->whereNotNull("annotation_id")
                 ->whereNotNull("source_annotation_id");
@@ -180,7 +179,7 @@ class PtpJob extends BaseJob implements ShouldQueue
             // Remove all initially selected points whose ids appear in the convertedPoints list
             $query->whereNotIn("image_annotations.id", $convertedPoints);
         }
-      /*  \Log::info("PTP_SQL_QUERY", [ "sql" => $query->toRawSql(),]);*/
+
         $annotations = $query->lazy();
 
 
@@ -189,7 +188,7 @@ class PtpJob extends BaseJob implements ShouldQueue
                 $imageAnnotationArray[$annotation->image_id] = [];
             }
             $imageAnnotationArray[$annotation->image_id][] = [
-                'annotation_id' => $annotation->id, //vlt besser wenn hier source anno steht aber dann auch python skript anpassn
+                'annotation_id' => $annotation->id,
                 'points' => $annotation->points,
                 'shape' => $annotation->shape_id,
                 'image' => $annotation->image_id,
@@ -268,48 +267,21 @@ class PtpJob extends BaseJob implements ShouldQueue
      */
     public function uploadConvertedAnnotations(): void
     {
-        \Log::info("PTP_UPLOAD_ERREICHT");
         if (File::missing($this->outputFile)) {
             return;
-        }
+        } //warum return? TODO
 
         $insertAnnotations = [];
-        $insertAnnotationLabels = [];
-
-        /*$inputData = json_decode(File::get($this->tmpInputFile), true);
-        $inputIds = [];
-
-        foreach($inputData as $annotations) {
-            foreach ($annotations as $inputAnnotation) {
-                $inputIds[] = (int) $inputAnnotation["annotation_id"];
-            }
-        }
-        $csvIds = [];*/
 
         foreach ($this->iterateOverCsvFile($this->outputFile) as $idx => $annotation) {
-
-            /*$csvIds[] = (int) $annotation["annotation_id"];
-
-            \Log::info("PTP_CSV_RESULT", ["job_id" => $this->ptpJobEntryId,
-                "source_id" => $annotation["annotation_id"],
-                "image_id"=> $annotation["image_id"],]);*/
-/*
-
-            if ($annotation["annotation_id"] === 816) {
-                \Log::info("PTP_CSV_MULTLABEL", ["source_anno_id" => $annotation["annotation_id"],
-                    "label_id" => $annotation["label_id"], "image_id" => $annotation["image_id"],
-                    )]);
-            }*/
-
 
             $now = Carbon::now();
 
             //It might happen that we are unable to convert some of the point
             //annotations. In this case, we should not upload the data.
             if (is_null($annotation['points'])) {
-                \Log::warning("PTP_CONVERSION_FAILED", ["source_id" => $annotation["annotation_id"]]);
                 continue;
-            } //TODO ganz interessant für später falls doch ohne counter
+            }
 
             \Log::info("PTP_sourceAnnotationId", ["value" => $annotation["annotation_id"]]);
 
@@ -326,49 +298,21 @@ class PtpJob extends BaseJob implements ShouldQueue
 
             $insertAnnotations[] = $newPtpAnnotation;
 
-            $insertAnnotationLabels[] = [
-                'label_id' => intval($annotation['label_id']),
-                'user_id' => $this->user->id,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-
             if ($idx > 0 && ($idx % static::$insertChunkSize) === 0) {
-                $this->insertAnnotationChunk($insertAnnotations, $insertAnnotationLabels);
+                $this->insertAnnotationChunk($insertAnnotations);
                 $insertAnnotations = [];
-                $insertAnnotationLabels = [];
             }
         }
-
-        //csv problem, noch benutzen um punkte zu zählen vlt
-      /*  $missingIds = array_values(array_diff($inputIds, $csvIds));
-
-        if(!empty($missingIds)) {
-            \Log::info("PTP_MISSING_CSV_RESULTS", ["job_id" => $this->ptpJobEntryId,
-                "missing_source_ids" => $missingIds,
-                "input_count" => count($inputIds), "csv_count" => count($csvIds)]);
-        }*/
-        ///
-
-
-
-
         if (count($insertAnnotations) > 0) {
-            $this->insertAnnotationChunk($insertAnnotations, $insertAnnotationLabels);
+            $this->insertAnnotationChunk($insertAnnotations);
         }
-
-
     }
     /**
-     * Insert annotation in the DB
+     * Insert chunk of PTP annotations in the DB.
      *
      * @param array $annotations Annotation to upload
-     * @param array $annotationLabels Annotation label to upload
      */
-    protected function insertAnnotationChunk(
-        array $annotations,
-        array $annotationLabels
-    ): void {
+    protected function insertAnnotationChunk(array $annotations): void {
         \Log::info("PTP_ANNOS VOR INSERT", ["count" => count($annotations), "annotations" => $annotations]);
 
         PtpAnnotation::insert($annotations);
@@ -403,7 +347,6 @@ class PtpJob extends BaseJob implements ShouldQueue
      */
     public function failed(?Throwable $exception): void
     {
-
         PtpJobModel::where("id", $this->ptpJobEntryId)->update(["status" => "failed"]);
         $this->user->notify(new PtpJobFailed($this->volume));
         $this->cleanupJob();
@@ -430,23 +373,6 @@ class PtpJob extends BaseJob implements ShouldQueue
         }
     }
 
-    /**
-     * Generate annotation chunks for new annotations
-     *
-     * @param  $a Annotations to process
-     */
-    protected function processNewAnnotations(array $a)
-    {
-
-        $annotations = collect($a)
-            ->groupBy('image_id')
-            ->map(fn ($an) => $an->pluck('id'));
-        $images = Image::whereIn('id', $annotations->keys())->get();
-
-        foreach ($images as $image) {
-            ProcessAnnotatedImage::dispatch($image, only: $annotations->get($image->id)->toArray());
-        }
-    }
 
     /**
      * Create a generator that iterates the lines of a CSV file containing annotation results from the PTP conversion.
@@ -477,7 +403,7 @@ class PtpJob extends BaseJob implements ShouldQueue
 
             $tmpChunk = array_combine($header, $data);
 
-            # String zu float error aus der csv umcasten
+            // Cast the IDs to int, because the python script may output and write the values as decimals into the csv.
             $tmpChunk["annotation_id"] = (int) $tmpChunk["annotation_id"];
             $tmpChunk["label_id"] = (int) $tmpChunk["label_id"];
             $tmpChunk["image_id"] = (int) $tmpChunk["image_id"];

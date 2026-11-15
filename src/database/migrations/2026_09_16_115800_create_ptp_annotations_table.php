@@ -23,6 +23,8 @@ return new class extends Migration
                 ->on("ptp_jobs")
                 ->onDelete("cascade");
 
+
+            // Deleting the image also deletes all annotations belonging to this image.
             $table->integer("image_id");
             $table->foreign("image_id")
                 ->references("id")

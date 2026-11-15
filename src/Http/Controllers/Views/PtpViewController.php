@@ -18,8 +18,9 @@ use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 
 
 /**
- * Controller for the PTP job page.
+ * Controller for the main PTP job page.
  * Loads volume and jobs. Counts the point annotations of the volume.
+ * Route: /volumes/{id}/ptp
  */
 class PtpViewController extends Controller {
 
@@ -33,12 +34,11 @@ class PtpViewController extends Controller {
         $volume = Volume::findOrFail($id);
         $user = $request->user();
 
-        // User can access ptp job page
+        // Every user can access and view the page
         if (!$user->can("sudo")) {
             $this->authorize("access", $volume);
         }
 
-        // right volume for ptp jobs; abort showing the page if volume isnt supported
         if (!$volume->isImageVolume() || $volume->hasTiledImages()) {
             abort(Response::HTTP_NOT_FOUND);
         }
@@ -47,7 +47,6 @@ class PtpViewController extends Controller {
         $jobs = PtpJobModel::where("volume_id", $volume->id)
             ->orderByDesc("created_at")
             ->get();
-
 
 
         // Calculate amount of annotations based on conversion choice

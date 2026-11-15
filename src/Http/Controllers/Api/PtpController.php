@@ -3,8 +3,6 @@
 namespace Biigle\Modules\Ptp\Http\Controllers\Api;
 
 use Biigle\Http\Controllers\Api\Controller;
-use Biigle\ImageAnnotation;
-use Biigle\Shape;
 use Biigle\Volume;
 use Exception;
 use Illuminate\Http\Request;
@@ -50,17 +48,16 @@ class PtpController extends Controller
             abort(400, 'Another point to polygon conversion job is running in this volume!');
         }
 
-        // Conversion choice radio buttons
-        $conversion_choice = $request->input("converted_points_sam");
 
-        if ($conversion_choice === "ignored" || $conversion_choice === "included") {
-            $options_param = $conversion_choice;
-        } else {
+        // Checks if an option to ignore or include already converted points has been selected
+        $conversionChoice = $request->input("converted_points_sam");
+
+        if ($conversionChoice !== "ignored" && $conversionChoice !== "included") {
             abort(400, "Invalid conversion option");
         }
 
         // Checks if enough points are available to start a conversion job
-        $query = PtpPointQuery::getPointsToConvert($volume, $options_param);
+        $query = PtpPointQuery::getPointsToConvert($volume, $conversionChoice);
 
         if ($query->count() <= 0) {
             abort(400, "No point annotations to convert!");
@@ -72,7 +69,7 @@ class PtpController extends Controller
             $ptpJobEntry = PtpJobModel::create([
                 "volume_id" => $volumeId,
                 "status" => "pending",
-                "conversion_options" => ["already_converted_points" => $options_param],
+                "conversion_options" => ["already_converted_points" => $conversionChoice],
             ]);
 
             // Register PTP job for this volume
