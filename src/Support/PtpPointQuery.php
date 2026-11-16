@@ -6,8 +6,8 @@ namespace Biigle\Modules\Ptp\Support;
 use Biigle\ImageAnnotation;
 use Biigle\Shape;
 use Biigle\Volume;
-use Illuminate\Database\Eloquent\Builder;
 use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
+use Illuminate\Database\Eloquent\Builder;
 
 
 /**
@@ -24,7 +24,6 @@ class PtpPointQuery {
      * @return Builder
      */
     public static function getPointsToConvert(Volume $volume, string $conversionOption): Builder {
-        /*$conversionOption = "included";*/
 
         // All point annotations in volume
         $query = ImageAnnotation::join("images", "image_annotations.image_id", "=", "images.id")
@@ -32,9 +31,10 @@ class PtpPointQuery {
                     ->where("image_annotations.shape_id", Shape::pointId());
 
 
-        if ($conversionOption == "ignored") {
-            // Remaining point annotations
-            // Exclude deleted source annos
+        if ($conversionOption === "ignored") {
+            // Find points that have already been converted.
+            // In case a successfully generated polygon has been deleted, its annotation id is set to null
+            // and the source point is not counted as successful anymore.
             $successfulPolygonIds = PtpJobModel::join("ptp_annotations", "ptp_annotations.ptp_job_id", "=", "ptp_jobs.id")
                     ->where("ptp_jobs.volume_id", $volume->id)
                     ->whereNotNull("ptp_annotations.annotation_id")
@@ -44,11 +44,6 @@ class PtpPointQuery {
 
             $query->whereNotIn("image_annotations.id", $successfulPolygonIds);
 
-           /* $remainingPointCount = ImageAnnotation::join("images", "image_annotations.image_id", "=", "images.id")
-                ->where("images.volume_id", $volume->id)
-                ->where("image_annotations.shape_id", Shape::pointId())
-                ->whereNotIn("image_annotations.id", $successfulPolygonIds)
-                ->count();*/
         }
 
         return $query;

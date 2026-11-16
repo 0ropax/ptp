@@ -2,9 +2,8 @@
 
 namespace Biigle\Modules\Ptp\Jobs;
 
-use Biigle\Image;
+
 use Biigle\ImageAnnotation;
-use Biigle\Jobs\ProcessAnnotatedImage;
 use Biigle\Modules\Ptp\Exceptions\PythonException;
 use Biigle\Modules\Ptp\Notifications\PtpJobConcluded;
 use Biigle\Modules\Ptp\Notifications\PtpJobFailed;
@@ -141,6 +140,10 @@ class PtpJob extends BaseJob implements ShouldQueue
                 }
             });
         });
+
+        $ptpJob->status = "waiting-for-review";
+        $ptpJob->save();
+
         $this->user->notify(new PtpJobConcluded($this->volume));
         $this->cleanupJob();
         $this->cleanupFiles();

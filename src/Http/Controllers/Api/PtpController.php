@@ -4,14 +4,14 @@ namespace Biigle\Modules\Ptp\Http\Controllers\Api;
 
 use Biigle\Http\Controllers\Api\Controller;
 use Biigle\Volume;
+use Biigle\Modules\Ptp\Support\PtpPointQuery;
+use Biigle\Modules\Ptp\Jobs\PtpJob as PtpConversionJob;
+use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 use Exception;
 use Illuminate\Http\Request;
 use Queue;
 use Ramsey\Uuid\Uuid;
-use Biigle\Modules\Ptp\Support\PtpPointQuery;
 
-use Biigle\Modules\Ptp\Jobs\PtpJob as PtpConversionJob;
-use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 
 /**
  * Controller used for creating a PTP Job Chain

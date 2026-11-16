@@ -3,26 +3,23 @@
 namespace Biigle\Modules\Ptp\Jobs;
 
 use Biigle\Shape;
-use Illuminate\Support\Facades\Storage;
-use Biigle\Modules\Ptp\PtpAnnotation;
-use FileCache;
 use Biigle\VolumeFile;
-use Illuminate\Queue\SerializesModels;
 use Biigle\Image;
 use Biigle\Jobs\ProcessAnnotatedImage;
+use Biigle\Modules\Ptp\PtpAnnotation;
+use Illuminate\Support\Facades\Storage;
+use FileCache;
 use SVG\SVG;
 use Exception;
 
 use Jcupitt\Vips\Image as VipsImage;
-use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 
 
 /**
+ * Generates the annotation patches with svg overlays for the ImageGrid in the review page.
  *
  */
 class PtpPatchJob extends ProcessAnnotatedImage {
-
-    use SerializesModels;
 
 
     public function __construct( public Image $image, public int $ptpJobId) {
@@ -34,15 +31,13 @@ class PtpPatchJob extends ProcessAnnotatedImage {
 
     public function handle():void {
 
-        // Callback
         FileCache::get($this->image, [$this, "handlePtpFile"]);
 
-        \Log::info("PTP_PATCH_HANDLE_AFTER", ["image_id" => $this->image->id, "ptp_job_id" => $this->ptpJobId]);
     }
 
 
     /**
-     *
+     * Generate and store patches with their SVGs.
      *
      * @param Image $image
      * @param string $path
@@ -52,12 +47,6 @@ class PtpPatchJob extends ProcessAnnotatedImage {
     public function handlePtpFile(Image $image, string $path): void {
 
         // All possible polygon annotations belonging to this image
-        /*$ptpAnnotations = PtpAnnotation::join("image_annotations", "ptp_annotations.source_annotation_id", "=", "image_annotations.id")
-                ->where("ptp_annotations.ptp_job_id", $this->ptpJobId)
-                ->where("image_annotations.image_id", $image->id)
-                ->select("ptp_annotations.*")
-                ->get();*/
-
         $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $this->ptpJobId)
             ->where("image_id", $image->id)
             ->get();
@@ -76,14 +65,10 @@ class PtpPatchJob extends ProcessAnnotatedImage {
                 $this->storePtpPatch($targetPath, $buffer);
 
 
-                $this->createPtpSvg($ptpAnnotation, $image);
+                $this->createPtpSvg($ptpAnnotation);
 
-                /*\Log::info("PTP_PATCH_STORAGE_DISK", [ "disk" => config("ptp.patch_storage_disk"),
-                    "path"=> $targetPath, "exists" => Storage::disk(config("ptp.patch_storage_disk"))->exists($targetPath),]);*/
             }
         }
-    //elternjob status setzen danach TODO
-        PtpJobModel::where("id", $this->ptpJobId)->update(["status" => "waiting-for-review"]); // TODO triggert zu früh weil noch nicht alle bilder durch sind
     }
 
 
@@ -91,11 +76,10 @@ class PtpPatchJob extends ProcessAnnotatedImage {
      * Generate and upload an SVG for the annotation.
      *
      * @param PtpAnnotation $ptpAnnotation
-     * @param Image $image
      * @return void
      * @throws Exception
      */
-    protected function createPtpSvg(PtpAnnotation $ptpAnnotation, Image $image): void {
+    protected function createPtpSvg(PtpAnnotation $ptpAnnotation): void {
 
         $points = $ptpAnnotation->points;
         $shape = Shape::polygon();
@@ -124,8 +108,6 @@ class PtpPatchJob extends ProcessAnnotatedImage {
             throw new Exception("Failed to save svg to PTP_PATCH_STORAGE_DISK");
         };
 
-        \Log::info("PTP_SVG_GANZ", ["path" => $targetPath, "exists" => Storage::disk($this->targetDisk)->exists($targetPath)]);
-
     }
 
 
@@ -135,15 +117,13 @@ class PtpPatchJob extends ProcessAnnotatedImage {
      * @param string $path
      * @param string $buffer
      * @return void
-     * @throws Exception if
+     * @throws Exception if patch couldn't be written to storage
      */
     protected function storePtpPatch(string $path, string $buffer): void {
 
         if (Storage::disk($this->targetDisk)->put($path, $buffer) === false) {
             throw new Exception("Failed to write to PTP_PATCH_STORAGE_DISK");
         }
-
-     /*   \Log::info("PTP_STORAGE", ["disk" => $disk, "config" =>config("Filesys : .{$disk}")]);*/
     }
 
 
@@ -159,7 +139,6 @@ class PtpPatchJob extends ProcessAnnotatedImage {
     protected function getPtpPatchTargetPath(VolumeFile $file, PtpAnnotation $ptpAnnotation, string $format): string {
 
         $prefix = fragment_uuid_path($file->uuid);
-
 
         return "$prefix/{$ptpAnnotation->id}.{$format}";
 

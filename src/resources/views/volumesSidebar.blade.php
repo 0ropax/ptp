@@ -1,5 +1,4 @@
-
-@if ($user->can('edit-in', $volume) && $volume->isImageVolume())
+@if ($user->can("access", $volume) && $volume->isImageVolume())
     @if($volume->hasTiledImages())
         <sidebar-tab name="ptp"
                      icon="hat-wizard"
@@ -10,7 +9,7 @@
         <sidebar-tab name="ptp"
                      icon="hat-wizard"
                      title="Convert Points to Polygons"
-                     href="{{route("volumes-ptp", $volume->id)}}">
+                     href="{{  route("volumes-ptp", $volume->id)  }}">
         </sidebar-tab>
     @endif
 @endif

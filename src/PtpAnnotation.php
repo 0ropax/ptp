@@ -9,18 +9,22 @@ use Biigle\Image;
 use Biigle\Label;
 
 /**
- * TODO
+ * A PtpAnnotation is a polygon proposal made by the SAM conversion.
+ *
+ * Polygons which are accepted in the review process are stored as permanent ImageAnnotations.
  */
 class PtpAnnotation extends Model
 {
 
-    /** TODO
+    /**
      * @var string[]
      */
     protected $fillable = [
         "ptp_job_id",
+        "image_id",
         "source_annotation_id",
         "annotation_id",
+        "label_id",
         "points",
     ];
 
@@ -41,10 +45,6 @@ class PtpAnnotation extends Model
         return $this->belongsTo(PtpJob::class, "ptp_job_id");
     }
 
-    /**
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     */
     public function image() {
 
         return $this->belongsTo(Image::class, "image_id");

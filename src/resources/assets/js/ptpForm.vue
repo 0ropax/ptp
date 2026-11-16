@@ -1,19 +1,21 @@
 <template>
 
-
-
     <!--- Conversion options --->
     <fieldset>
         <div class="form-group">
             <div class="radio">
-                <label for="point_to_polygon_sam">
-                    <input type="radio" id="include_converted_points_sam" name="converted_points_sam" value="included" v-model="convertedPointsSam">
+                <label>
+                    <input type="radio"
+                           name="converted_points_sam"
+                           value="included"
+                           v-model="convertedPointsSam">
+
                     <strong>Convert all points</strong>
-                    <div class="help-block">
+                    <span class="help-block">
                         Converts all point annotations in this volume, including points that were successfully converted
                         in previous jobs. All existing permanent polygon annotations are kept.
                         Overall points to convert in this volume: {{ totalPointCount }}.
-                    </div>
+                    </span>
                 </label>
             </div>
         </div>
@@ -21,27 +23,27 @@
 
         <div class="form-group">
             <div class="radio">
-                <label for="point_to_polygon_sam">
-                    <input type="radio" id="ignore_converted_points_sam" name="converted_points_sam" value="ignored" v-model="convertedPointsSam" checked>
+                <label>
+                    <input type="radio"
+                           name="converted_points_sam"
+                           value="ignored"
+                           v-model="convertedPointsSam"
+                           checked>
                     <strong>Ignore already converted points</strong>
-                    <div class="help-block">
+                    <span class="help-block">
                         Only converts the points which do not have an accepted permanent polygon. Previously failed
                         or rejected point conversions are processed again.
                         All existing permanent polygon annotations are kept.
                         Overall points to convert in this volume: {{  remainingPointCount  }}.
-                    </div>
+                    </span>
 
                 </label>
             </div>
         </div>
-
-
-        <!--- SPAETER TODO --->
-<!--        <div id="ptp-label-selector"></div>  -->
-
     </fieldset>
 
 
+    <!--- Create Job Button --->
     <div>
         <p>
             <button
@@ -60,28 +62,23 @@
         </p>
     </div>
 
-
-
-
-
 </template>
 
 
 <script>
 import PtpJobApi from "./api/ptpJob.js";
-import { handleErrorResponse } from "./import.js";
-import { LoaderMixin } from "./import.js";
-//labelselector?
+import {  handleErrorResponse, LoaderMixin  } from "./import.js";
 
 export default {
+
     mixins: [LoaderMixin],
+
     data() {
         return {
             volumeId: biigle.$require("ptp.volumeId"),
             convertedPointsSam: "ignored",
             totalPointCount: biigle.$require("ptp.totalPointCount"),
             remainingPointCount: biigle.$require("ptp.remainingPointCount"),
-            /*manualUrl: biigle.$require("ptp.ptpManualUrl"),*/
         };
     },
 
@@ -100,14 +97,6 @@ export default {
     },
 
     methods: {
-       /* sendPtpRequest() {
-            PtpJobApi.save({ id: this.volumeId }, {})
-                .then(this.startLoading, (e) => {
-                    window.location.reload();
-                    this.finishLoading();
-                    handleErrorResponse(e);
-                });
-        }*/
         sendPtpRequest() {
 
             this.startLoading();
@@ -134,12 +123,7 @@ export default {
 
         const message = sessionStorage.getItem("ptpJobDeleted");
 
-        console.log("BIIGLE 1");
-        console.log("BIIGLE 2", message);
-
         if (message) {
-            console.log("BIIGLE NOTIFIC");
-
             biigle.$require("messages").success(message);
             sessionStorage.removeItem("ptpJobDeleted");
         }
