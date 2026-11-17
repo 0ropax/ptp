@@ -132,6 +132,7 @@
                 class="btn btn-success btn-block"
                 style="margin-bottom: 10px;"
                 @click="finishReviewPtp"
+                :disabled="locked"
                 @disabled($ptpJob->status !== "waiting-for-review")
                 @if($ptpJob->status === "review-completed")
                     title="This job has already been reviewed"
@@ -156,9 +157,17 @@
                 <div>
                     <button class="btn btn-danger"
                             @click="deletePtpJob"
+                            :disabled="!userIsNotGuest"
                             type="submit">Delete this job</button>
                 </div>
             @endif
+
+
+
+            <p v-if="!userIsNotGuest" class="text-muted">
+                <br>
+                You don't have the permission to start or delete a PTP job for this volume.
+            </p>
 
 
         </div>
@@ -191,35 +200,3 @@
 
 
 </sidebar>
-
-
-
-<style scoped>
-
-
-  /*  .ptp-job-tab__bottom {
-
-        margin-top: auto;
-        padding-top: 1em;
-        text-align: right;
-        flex-shrink: 0;
-    }
-
-    .sidebar-tab__content--ptp {
-        height: 100%;
-
-
-        display:flex;
-        flex-direction:column;
-    }
-
-
-
-
-    .ptp-job-tab__top {
-        flex:1;
-        min-height: 0;
-        overflow-y: auto;
-    }*/
-</style>
-

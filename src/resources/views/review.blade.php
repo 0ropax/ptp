@@ -9,6 +9,7 @@
         biigle.$declare("ptp.annotations", @json($ptpAnnotations));
         biigle.$declare("ptp.jobStatus", @json($ptpJob->status));
         biigle.$declare("ptp.labelTrees", @json($labelTrees));
+        biigle.$declare("ptp.userIsNotGuest", @json(auth()->user()->can("edit-in", $volume)));
 
     </script>
 

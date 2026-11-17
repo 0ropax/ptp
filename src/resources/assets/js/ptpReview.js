@@ -20,6 +20,7 @@ export default {
             selectedLabel: null,
             labelTrees: [],
             unsavedChangesFlag: false,
+            userIsNotGuest: biigle.$require("ptp.userIsNotGuest"),
         };
     },
 
@@ -55,6 +56,8 @@ export default {
         },
 
         finishReviewPtp() {
+
+
             const rejectedIds = [];
 
             for (const annotation of this.annotations) {
@@ -64,13 +67,15 @@ export default {
             }
        /*     console.log(rejectedIds);*/
 
-            PtpJob.review( { id: this.jobId  }, {  rejected: rejectedIds  })
-                .then((response) => {
-                    this.unsavedChangesFlag = false;
-                    window.location.reload();
-            });
+            if (confirm("Are you sure that you want to finish this review? Your selection will be saved and cannot be changed afterwards." +
+                "\n\nPress OK to continue saving.")) {
+                PtpJob.review({id: this.jobId}, {rejected: rejectedIds})
+                    .then((response) => {
+                        this.unsavedChangesFlag = false;
+                        window.location.reload();
+                    });
 
-
+            }
         },
 
         handleSelectedLabel(label) {
@@ -82,7 +87,7 @@ export default {
         },
 
         deletePtpJob() {
-            if (confirm("Are you sure that you want to delete this job?")) {
+            if (confirm("Are you sure that you want to delete this job?\n\nPress OK to delete the job and its polygon proposals. The source annotations will not be removed.")) {
                 PtpJob.destroy( {  id:this.jobId})
                     .then((response) => {
                         this.unsavedChangesFlag = false;
@@ -109,7 +114,6 @@ export default {
                 event.preventDefault();
                 event.returnValue = "";
             }
-            this.messageBeforePageExit;
         },
 
 
@@ -118,7 +122,7 @@ export default {
 
     computed: {
         locked() {
-            return this.jobStatus === "review-completed";
+            return !this.userIsNotGuest || this.jobStatus !== "waiting-for-review";
         },
 
         filteredAnnotations() {

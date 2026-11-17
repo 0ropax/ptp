@@ -48,11 +48,12 @@ class PtpReviewController extends Controller {
             $projectIds = $volume->projects()->pluck('id');
         } else {
             // Array of all project IDs that the user and the image have in common
-            // and where the user is editor, expert or admin.
+            // and where the user is editor, expert, guest or admin.
             $projectIds = Project::inCommon($user, $volume->id, [
                 Role::editorId(),
                 Role::expertId(),
                 Role::adminId(),
+                Role::guestId(),
             ])->pluck('id');
         }
 
@@ -66,17 +67,11 @@ class PtpReviewController extends Controller {
             ->get();
 
 
-        /*$ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
-            ->whereHas("sourceAnnotation")
-            ->with(["sourceAnnotation.image", "sourceAnnotation.labels"])
-            ->get();*/
-
         $ptpAnnotations = PtpAnnotation::where("ptp_job_id", $id)
             ->with(["image", "label"])
             ->get();
             //with noch am besten statt join für performance, weil image uuid sowieso für die thumbns nötig
 
-/*        return view('ptp::review', ["ptpJob" => $ptpJob, "volume" => $volume, "ptpAnnotations" => $ptpAnnotations, "labelTrees" => $labelTrees,]);*/
 
         return view('ptp::review', compact (
             "ptpJob",

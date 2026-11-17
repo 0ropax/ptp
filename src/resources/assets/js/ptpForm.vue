@@ -50,7 +50,7 @@
                 class="btn btn-success pull-right"
                 type="button"
                 :title="ptpButtonTitle"
-                :disabled="loading || null"
+                :disabled="loading || !userIsNotGuest"
                 @click="sendPtpRequest">
 
                 <loader :active="loading"></loader>
@@ -59,6 +59,9 @@
         </p>
         <p v-if="isJobRunning" class="text-info">
             The job was submitted. You will be notified when it is finished.
+        </p>
+        <p v-if="!userIsNotGuest" class="text-muted">
+            You don't have permission to start a PTP conversion job for this volume.
         </p>
     </div>
 
@@ -79,6 +82,7 @@ export default {
             convertedPointsSam: "ignored",
             totalPointCount: biigle.$require("ptp.totalPointCount"),
             remainingPointCount: biigle.$require("ptp.remainingPointCount"),
+            userIsGuest: biigle.$require("ptp.userIsNotGuest"),
         };
     },
 
