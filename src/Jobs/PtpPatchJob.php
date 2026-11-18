@@ -7,6 +7,7 @@ use Biigle\VolumeFile;
 use Biigle\Image;
 use Biigle\Jobs\ProcessAnnotatedImage;
 use Biigle\Modules\Ptp\PtpAnnotation;
+use Biigle\Modules\Ptp\PtpJob as PtpJobModel;
 use Illuminate\Support\Facades\Storage;
 use FileCache;
 use SVG\SVG;
@@ -30,6 +31,11 @@ class PtpPatchJob extends ProcessAnnotatedImage {
     }
 
     public function handle():void {
+
+        // Don't generate the patches when the PTP job has already been deleted.
+        if (!(PtpJobModel::whereKey($this->ptpJobId)->exists())) {
+            return;
+        }
 
         FileCache::get($this->image, [$this, "handlePtpFile"]);
 
@@ -57,17 +63,39 @@ class PtpPatchJob extends ProcessAnnotatedImage {
 
             $vipsImage = VipsImage::newFromFile($path);
 
-            foreach ($ptpAnnotations as $ptpAnnotation) {
 
-                $buffer = $this->getAnnotationPatch($vipsImage, $ptpAnnotation->points, Shape::polygon());
+            try {
+                foreach ($ptpAnnotations as $ptpAnnotation) {
 
-                $targetPath = $this->getPtpPatchTargetPath($image, $ptpAnnotation, config("largo.patch_format"));
-                $this->storePtpPatch($targetPath, $buffer);
+                    $buffer = $this->getAnnotationPatch($vipsImage, $ptpAnnotation->points, Shape::polygon());
+
+                    $targetPath = $this->getPtpPatchTargetPath($image, $ptpAnnotation, config("largo.patch_format"));
+                    $this->storePtpPatch($targetPath, $buffer);
 
 
-                $this->createPtpSvg($ptpAnnotation);
+                    $this->createPtpSvg($ptpAnnotation);
 
+
+                }
+            } finally {
+                if (!(PtpJobModel::whereKey($this->ptpJobId)->exists())) {
+                    foreach ($ptpAnnotations as $ptpAnnotation) {
+
+                        $patchPath = $this->getPtpPatchTargetPath($image, $ptpAnnotation, config("largo.patch_format"));
+
+                        $svgPath = $this->getPtpPatchTargetPath($image, $ptpAnnotation, "svg");
+
+                        Storage::disk($this->targetDisk)->delete([$patchPath, $svgPath]);
+
+
+                    }
+                }
             }
+
+
+
+
+
         }
     }
 

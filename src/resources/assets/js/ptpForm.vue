@@ -82,7 +82,7 @@ export default {
             convertedPointsSam: "ignored",
             totalPointCount: biigle.$require("ptp.totalPointCount"),
             remainingPointCount: biigle.$require("ptp.remainingPointCount"),
-            userIsGuest: biigle.$require("ptp.userIsNotGuest"),
+            userIsNotGuest: biigle.$require("ptp.userIsNotGuest"),
         };
     },
 

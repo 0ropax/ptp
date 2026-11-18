@@ -1,8 +1,24 @@
 @section("full-navbar", true)
 
 
-<div class="sidebar-container__content">
+<div class="sidebar-container__content ptp-content">
 
+    @if ($ptpJob->status === "failed")
+
+        <div class="ptp-content-message">
+            <div class="ptp-status ptp-status--failed">
+                {{-- <span class="fa-stack fa-3x" title="PTP job failed">--}}
+                <span class="fa-stack fa-2x" title="Job failed">
+                            <i class="fas fa-circle fa-stack-2x"></i>
+                            <i class="fas fa-hat-wizard fa-stack-1x fa-inverse"></i>
+                     </span>
+
+            </div>
+            <p class="text-danger lead">
+               {{-- <strong>--}} The PTP conversion job has failed.{{--</strong>--}}
+            </p>
+        </div>
+    @else
 
     <ptp-patch-grid
         v-if="jobStatus === 'waiting-for-review' || jobStatus === 'review-completed'"
@@ -13,6 +29,7 @@
         v-on:select="handleSelect">
     </ptp-patch-grid>
 
+    @endif
 
     @if($ptpJob->status !== "pending" && $ptpJob->status !== "in-progress")
         <div v-if="selectedLabel && filteredAnnotations.length === 0"
@@ -37,8 +54,8 @@
         icon="info-circle"
         title="Job information">
 
-        <div class="sidebar-tab__content sidebar-tab__content--ptp">
-            <div class="ptp-job-tab__top">
+        <div class="sidebar-tab__content">
+            <div>
             <p>
                 Job #{{  $ptpJob->id  }}
 
@@ -200,3 +217,38 @@
 
 
 </sidebar>
+
+@push("styles")
+
+<style scoped>
+
+    .ptp-content {
+        height: 100%;
+        position: relative;
+    }
+
+    .ptp-content-message {
+        display: flex;
+        flex-flow: column;
+        justify-content:center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        text-align: center;
+       /* padding-top: 270px;*/
+    }
+
+    .ptp-status {
+        margin-bottom: 20px;
+    }
+    .ptp-status--failed {
+        color: #d9524f;
+    }
+
+
+</style>
+@endpush

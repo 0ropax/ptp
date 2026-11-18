@@ -118,6 +118,8 @@ class PtpJob extends BaseJob implements ShouldQueue
         $ptpJob->save();
 
 
+  /*      throw new \RuntimeException("PTP FAIL");*/
+
         DB::transaction(function () use ($conversionChoice) {
 
             $callback = function ($images, $paths) {

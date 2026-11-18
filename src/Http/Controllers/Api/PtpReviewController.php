@@ -225,6 +225,8 @@ class PtpReviewController extends Controller {
           /*  $ptpJob->delete();*/
             $ptpAnnotations = $ptpJob->annotations()->with("image")->get();
 
+            $ptpJob->delete();
+
             foreach ($ptpAnnotations  as $ptpAnnotation) {
 
                 $prefix= fragment_uuid_path($ptpAnnotation->image->uuid);
@@ -239,11 +241,12 @@ class PtpReviewController extends Controller {
 
             }
 
-            $ptpJob->delete();
-
             return response("PTP job was deleted successfully",200);
 
 
+
+        } else {
+            abort(400, "The job cannot be deleted in this state. ");
 
         }
 

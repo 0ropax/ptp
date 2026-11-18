@@ -48,6 +48,8 @@ class PtpViewController extends Controller {
             ->orderByDesc("created_at")
             ->get();
 
+        $newestJob = $jobs->first();
+
 
         // Calculate amount of annotations based on conversion choice
         $totalPointCount = PtpPointQuery::getPointsToConvert($volume, "included")->count();
@@ -59,6 +61,7 @@ class PtpViewController extends Controller {
             "volume",
             "totalPointCount",
             "jobs",
+            "newestJob",
             "remainingPointCount",
         ));
     }

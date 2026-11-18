@@ -12,50 +12,10 @@
 @endsection
 
 
-{{--@section('content')  FALLS DOCH NOCH DIE FARBE ÄNDERN ZEIT IST TODO !
-    <div class="container">
-        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-            @if ($hasJobsInProgress)
-                <div class="maia-status maia-status--running">
-                <span class="fa-stack fa-2x" title="Job running for {{ $volume->name }}">
-                    @if ($hasJobsRunning)
-                        <i class="fas fa-circle fa-stack-1x"></i>
-                        <i class="fas fa-cog fa-spin fa-stack-2x"></i>
-                    @else
-                        <i class="fas fa-circle fa-stack-2x"></i>
-                    @endif
-                    <i class="fas fa-robot fa-stack-1x fa-inverse"></i>
-                </span>
-                </div>
-            @elseif ($newestJobHasFailed)
-                <div class="maia-status maia-status--failed">
-                <span class="fa-stack fa-2x" title="The most recent job failed for {{ $volume->name }}">
-                    <i class="fas fa-circle fa-stack-2x"></i>
-                    <i class="fas fa-robot fa-stack-1x fa-inverse"></i>
-                </span>
-                </div>
-            @else
-                <div class="maia-status">
-                <span class="fa-stack fa-2x" title="No jobs in progress for {{ $volume->name }}">
-                    <i class="fas fa-circle fa-stack-2x"></i>
-                    <i class="fas fa-robot fa-stack-1x fa-inverse"></i>
-                </span>
-                </div>
-            @endif
-            @include('maia::index.job-list')
-            @if ($hasJobsInProgress)
-                <p class="text-muted">New jobs cannot be created while there are unfinished other jobs.</p>
-            @else
-                @include('maia::index.job-form')
-            @endunless
-        </div>
-    </div>
-@endsection--}}
 
 @push("scripts")
     <script type="module">
         biigle.$declare("ptp.volumeId", {!!  $volume->id !!});
- //biigle.$declare("ptp.labelTrees", { !! $labelTrees->toJson() !!});
         biigle.$declare("ptp.isRunning", @json(isset($volume->attrs["ptp_job_id"])));
         biigle.$declare("ptp.totalPointCount", @json($totalPointCount));
         biigle.$declare("ptp.remainingPointCount", @json($remainingPointCount));
@@ -66,10 +26,17 @@
 
 
 @section('content')
+
     <div class="container">
         <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
 
-            <div class="ptp-status">
+            <div class="ptp-status
+                @if($newestJob?->status === "failed")
+                    ptp-status--failed
+                @elseif ($newestJob?->status === "pending" || $newestJob?->status === "in-progress")
+                    ptp-status--running
+                @endif">
+
                 <span class="fa-stack fa-2x">
                     <i class="fas fa-circle fa-stack-2x"></i>
                     <i class="fas fa-hat-wizard fa-stack-1x fa-inverse"></i>
@@ -86,13 +53,26 @@
     </div>
 @endsection
 
-<!--- maia kreis ist nicht rot sondern grün wenn erfolgreich? bzw abhängig nach status des letzten jobs. --->
-<style scoped>
+
+@push("styles")
+
+<style>
 
     .ptp-status {
         text-align: center;
-        color: #d9534f;
+        color: #5cb85c;
         margin-bottom: 20px;
     }
 
+    .ptp-status--running {
+        color: #f0ad4e;
+    }
+
+    .ptp-status--failed {
+        color: #d9534f;
+    }
+
+
 </style>
+
+@endpush
